@@ -4,6 +4,34 @@ import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
 
+// ─── UTILIDADES DE VALIDACIÓN (Ecuador) ───
+const validarCedula = (cedula: string) => {
+    if (cedula.length !== 10 || !/^\d+$/.test(cedula)) return false;
+    const provincia = parseInt(cedula.substring(0, 2));
+    if (provincia < 1 || provincia > 24) return false;
+
+    const digitoRegion = parseInt(cedula[2]);
+    if (digitoRegion >= 6) return false;
+
+    const ultimoDigito = parseInt(cedula[9]);
+    let suma = 0;
+    for (let i = 0; i < 9; i++) {
+        let mult = parseInt(cedula[i]) * (i % 2 === 0 ? 2 : 1);
+        suma += mult > 9 ? mult - 9 : mult;
+    }
+    const digitoVerificador = (suma % 10 === 0) ? 0 : 10 - (suma % 10);
+    return digitoVerificador === ultimoDigito;
+};
+
+const validarRUC = (ruc: string) => {
+    if (ruc.length !== 13 || !/^\d+$/.test(ruc)) return false;
+    const establecimiento = ruc.substring(10, 13);
+    if (establecimiento === '000') return false;
+    
+    // RUC Persona Natural (mismos primeros 10 dígitos que la cédula)
+    return validarCedula(ruc.substring(0, 10));
+};
+
 interface Cliente {
     id: string; 
     cliente: string;
@@ -35,25 +63,14 @@ const Clientes: React.FC = () => {
 
     // ─── 1. CARGAR CLIENTES ───
     const fetchClientes = async () => {
-        console.log("🔍 Intentando obtener clientes de:", API_URL);
         try {
             const response = await fetch(API_URL, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            console.log("📡 Estado de la respuesta (GET):", response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("❌ Error del servidor al listar:", errorText);
-                throw new Error('Error al cargar clientes');
-            }
-
+            if (!response.ok) throw new Error('Error al cargar clientes');
             const data = await response.json();
-            console.log("✅ Datos recibidos del servidor:", data);
             setClientes(data);
         } catch (err: any) {
-            console.error("❌ Error en la petición GET:", err.message);
             setError(err.message);
         }
     };
@@ -68,14 +85,37 @@ const Clientes: React.FC = () => {
         setForm((f) => ({ ...f, [k]: e.target.value }));
     };
 
-    // ─── 2. GUARDAR CLIENTE ───
+    // ─── 2. GUARDAR CLIENTE CON VALIDACIONES ───
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setLoading(true);
 
-        console.log("📤 Enviando datos al backend:", form);
-        console.log("🔑 Usando Token:", token ? "Token presente" : "Token AUSENTE");
+        const { cliente, identificacion, tipo_identificacion } = form;
+
+        // Validaciones Locales
+        if (!cliente.trim()) {
+            setError('El nombre del cliente es obligatorio.');
+            return;
+        }
+
+        if (tipo_identificacion === 'Cédula') {
+            if (!validarCedula(identificacion)) {
+                setError('La cédula no es válida (debe tener 10 dígitos y cumplir el algoritmo regional).');
+                return;
+            }
+        } else if (tipo_identificacion === 'RUC') {
+            if (!validarRUC(identificacion)) {
+                setError('El RUC no es válido (debe tener 13 dígitos y terminar en un establecimiento válido como 001).');
+                return;
+            }
+        } else if (tipo_identificacion === 'Pasaporte') {
+            if (identificacion.length < 5) {
+                setError('El número de pasaporte es demasiado corto.');
+                return;
+            }
+        }
+
+        setLoading(true);
 
         try {
             const response = await fetch(API_URL, {
@@ -87,16 +127,12 @@ const Clientes: React.FC = () => {
                 body: JSON.stringify(form)
             });
 
-            console.log("📡 Estado de la respuesta (POST):", response.status);
-
             if (!response.ok) {
                 const errorData = await response.json();
-                console.error("❌ Error detallado del Back:", errorData);
-                throw new Error(errorData.error || 'Error al guardar');
+                throw new Error(errorData.error || 'Error al guardar el registro');
             }
 
             const clienteGuardado = await response.json();
-            console.log("✅ Cliente guardado exitosamente:", clienteGuardado);
 
             setClientes([clienteGuardado, ...clientes]);
             setSuccess(true);
@@ -110,7 +146,6 @@ const Clientes: React.FC = () => {
 
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            console.error("❌ Error en la petición POST:", err.message);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -121,7 +156,6 @@ const Clientes: React.FC = () => {
 
     return (
         <div className="dash-root">
-            {/* Solo pasamos el usuario para evitar errores de tipos */}
             <Navbar user={user} />
 
             <div className="page-content">
@@ -142,23 +176,37 @@ const Clientes: React.FC = () => {
 
                     <button 
                         className={showForm ? "btn-secondary" : "btn-primary"}
-                        onClick={() => {
-                            console.log("Toggle Form:", !showForm);
-                            setShowForm(!showForm);
-                        }}
+                        onClick={() => setShowForm(!showForm)}
                     >
                         {showForm ? 'Cancelar' : '+ Añadir Cliente'}
                     </button>
                 </div>
 
                 {error && (
-                    <div className="error-box" style={{ marginBottom: 20, background: '#ff000022', border: '1px solid red', padding: 10 }}>
-                        <strong>Error detectado:</strong> {error}
+                    <div className="error-box" style={{ 
+                        marginBottom: 20, 
+                        background: 'rgba(255, 0, 0, 0.1)', 
+                        border: '1px solid #ff4444', 
+                        padding: '12px 16px',
+                        color: '#ff4444',
+                        borderRadius: 8
+                    }}>
+                        <strong>Error:</strong> {error}
                     </div>
                 )}
                 
                 {success && (
-                    <div className="success-banner" style={{ marginBottom: 20 }}>
+                    <div className="success-banner" style={{ 
+                        marginBottom: 20, 
+                        background: 'rgba(0, 255, 100, 0.1)',
+                        border: '1px solid #00c851',
+                        padding: '12px 16px',
+                        color: '#00c851',
+                        borderRadius: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8
+                    }}>
                         <IconCheck /> Cliente registrado correctamente.
                     </div>
                 )}
@@ -204,14 +252,15 @@ const Clientes: React.FC = () => {
                                         type="text"
                                         value={form.identificacion}
                                         onChange={handleChange('identificacion')}
-                                        placeholder="0000000000"
+                                        maxLength={form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20}
+                                        placeholder={form.tipo_identificacion === 'Cédula' ? "10 dígitos" : "13 dígitos"}
                                         required
                                     />
                                 </div>
                             </div>
 
-                            <div className="form-footer">
-                                <button type="submit" className="btn-primary" disabled={loading}>
+                            <div className="form-footer" style={{ marginTop: 24 }}>
+                                <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
                                     {loading ? <span className="spinner" /> : <IconSend />}
                                     {loading ? 'Procesando...' : 'Confirmar Registro'}
                                 </button>
@@ -247,7 +296,8 @@ const Clientes: React.FC = () => {
                                                   padding: '4px 10px', 
                                                   borderRadius: 20, 
                                                   fontSize: 12,
-                                                  background: c.tipo === 'Público' ? '#1e3a8a' : '#064e3b'
+                                                  background: c.tipo === 'Público' ? '#1e3a8a' : '#064e3b',
+                                                  color: 'white'
                                               }}>
                                             {c.tipo}
                                         </span>
