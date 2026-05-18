@@ -1,46 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
+import { obtenerUsuarios, crearUsuario, type UserListItem } from '../services/usuarioService.ts';
 
-// ─── UTILIDADES DE VALIDACIÓN ───
-const validarCedulaEcuatoriana = (cedula: string) => {
-    if (cedula.length !== 10 || !/^\d+$/.test(cedula)) return false;
-    const provincia = parseInt(cedula.substring(0, 2));
-    if (provincia < 1 || provincia > 24) return false;
-    const digitoRegion = parseInt(cedula[2]);
-    if (digitoRegion >= 6) return false;
+import { 
+    validarCedulaEcuatoriana, 
+    validarPassword, 
+    validarTelefonoEcuador, 
+    validarEmail 
+} from '../utils/validaciones';
 
-    let suma = 0;
-    for (let i = 0; i < 9; i++) {
-        let mult = parseInt(cedula[i]) * (i % 2 === 0 ? 2 : 1);
-        suma += mult > 9 ? mult - 9 : mult;
-    }
-    const digitoVerificador = (suma % 10 === 0) ? 0 : 10 - (suma % 10);
-    return digitoVerificador === parseInt(cedula[9]);
-};
-
-const validarPassword = (pass: string) => {
-    // Mínimo 8 caracteres, al menos una letra y un número
-    return pass.length >= 8 && /\d/.test(pass) && /[a-zA-Z]/.test(pass);
-};
-
-interface UserListItem {
-    id: string;
-    nombre: string;
-    email: string;
-    rol: string;
-    cedula: string;
-    telefono: string;
-    areas: string;
-    estado_activo: boolean;
-}
-
-const Usuarios: React.FC = () => {
-    const API_URL = 'http://localhost:3000/api/usuarios';
+const Usuarios = () => {
     const userString = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
     const user: Usuario | null = userString ? JSON.parse(userString) : null;
 
     const [usuarios, setUsuarios] = useState<UserListItem[]>([]);
@@ -59,21 +33,26 @@ const Usuarios: React.FC = () => {
         areas: ''
     });
 
-    const fetchUsuarios = async () => {
-        try {
-            const response = await fetch(API_URL, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Error al obtener usuarios');
-            const data = await response.json();
-            setUsuarios(data);
-        } catch (err: any) {
-            setError(err.message);
-        }
-    };
-
     useEffect(() => {
-        if (user) fetchUsuarios();
+        const cargarListaUsuarios = async () => {
+            try {
+                const data = await obtenerUsuarios();
+                setUsuarios(data);
+            } catch (err) {
+                if (axios.isAxiosError(err)) {
+                    setError(err.response?.data?.message || 'Error al obtener usuarios');
+                } else if (err instanceof Error) {
+                    setError(err.message);
+                } else {
+                    setError('Error desconocido al cargar la lista');
+                }
+            }
+        };
+
+        if (user) {
+            cargarListaUsuarios();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleChange = (k: keyof typeof form) => (
@@ -91,31 +70,26 @@ const Usuarios: React.FC = () => {
         e.preventDefault();
         setError('');
 
-        // 1. Validar Cédula
         if (!validarCedulaEcuatoriana(form.cedula)) {
             setError('La cédula ingresada no es válida para el territorio ecuatoriano.');
             return;
         }
 
-        // 2. Validar Teléfono (Ecuador móvil: 09XXXXXXXX)
-        if (!/^09\d{8}$/.test(form.telefono)) {
+        if (!validarTelefonoEcuador(form.telefono)) {
             setError('El teléfono debe tener 10 dígitos y empezar con 09.');
             return;
         }
 
-        // 3. Validar Email
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        if (!validarEmail(form.email)) {
             setError('El formato del correo electrónico es incorrecto.');
             return;
         }
 
-        // 4. Validar Password
         if (!validarPassword(form.password)) {
             setError('La contraseña debe tener al menos 8 caracteres, una letra y un número.');
             return;
         }
 
-        // 5. Validar Área si es Jefe
         if (form.rol === 'Jefe de Area' && !form.areas) {
             setError('Debe asignar un área al Jefe de Área.');
             return;
@@ -124,28 +98,21 @@ const Usuarios: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(form)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Error al crear usuario');
-            }
-
-            const nuevoUsuario = await response.json();
+            const nuevoUsuario = await crearUsuario(form);
+            
             setUsuarios([nuevoUsuario, ...usuarios]);
             setSuccess(true);
             setShowForm(false);
             setForm({ nombre: '', email: '', password: '', rol: 'Responsable', cedula: '', telefono: '', areas: '' });
             setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.error || err.response?.data?.message || 'Error al crear usuario');
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Error al procesar la solicitud');
+            }
         } finally {
             setLoading(false);
         }

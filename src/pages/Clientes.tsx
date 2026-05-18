@@ -1,51 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
+import { obtenerClientes, crearCliente, type Cliente } from '../services/clienteService';
+import { validarCedulaEcuatoriana, validarRUC } from '../utils/validaciones';
 
-// ─── UTILIDADES DE VALIDACIÓN (Ecuador) ───
-const validarCedula = (cedula: string) => {
-    if (cedula.length !== 10 || !/^\d+$/.test(cedula)) return false;
-    const provincia = parseInt(cedula.substring(0, 2));
-    if (provincia < 1 || provincia > 24) return false;
-
-    const digitoRegion = parseInt(cedula[2]);
-    if (digitoRegion >= 6) return false;
-
-    const ultimoDigito = parseInt(cedula[9]);
-    let suma = 0;
-    for (let i = 0; i < 9; i++) {
-        let mult = parseInt(cedula[i]) * (i % 2 === 0 ? 2 : 1);
-        suma += mult > 9 ? mult - 9 : mult;
-    }
-    const digitoVerificador = (suma % 10 === 0) ? 0 : 10 - (suma % 10);
-    return digitoVerificador === ultimoDigito;
-};
-
-const validarRUC = (ruc: string) => {
-    if (ruc.length !== 13 || !/^\d+$/.test(ruc)) return false;
-    const establecimiento = ruc.substring(10, 13);
-    if (establecimiento === '000') return false;
-    
-    // RUC Persona Natural (mismos primeros 10 dígitos que la cédula)
-    return validarCedula(ruc.substring(0, 10));
-};
-
-interface Cliente {
-    id: string; 
-    cliente: string;
-    tipo: string;
-    tipo_identificacion: string;
-    identificacion: string;
-    creado_por?: string;
-    fecha_creacion?: string;
-}
-
-const Clientes: React.FC = () => {
-    const API_URL = 'http://localhost:3000/api/clientes';
+const Clientes = () => {
     const userString = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
     const user: Usuario | null = userString ? JSON.parse(userString) : null;
 
     const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -61,22 +24,24 @@ const Clientes: React.FC = () => {
         identificacion: ''
     });
 
-    // ─── 1. CARGAR CLIENTES ───
-    const fetchClientes = async () => {
-        try {
-            const response = await fetch(API_URL, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error('Error al cargar clientes');
-            const data = await response.json();
-            setClientes(data);
-        } catch (err: any) {
-            setError(err.message);
-        }
-    };
-
     useEffect(() => {
+        const fetchClientes = async () => {
+            try {
+                const data = await obtenerClientes();
+                setClientes(data);
+            } catch (err) {
+                if (axios.isAxiosError(err)) {
+                    setError(err.response?.data?.message || 'Error al cargar clientes');
+                } else if (err instanceof Error) {
+                    setError(err.message);
+                } else {
+                    setError('Error desconocido al cargar la lista');
+                }
+            }
+        };
+
         if (user) fetchClientes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleChange = (k: keyof typeof form) => (
@@ -85,21 +50,19 @@ const Clientes: React.FC = () => {
         setForm((f) => ({ ...f, [k]: e.target.value }));
     };
 
-    // ─── 2. GUARDAR CLIENTE CON VALIDACIONES ───
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
         const { cliente, identificacion, tipo_identificacion } = form;
 
-        // Validaciones Locales
         if (!cliente.trim()) {
             setError('El nombre del cliente es obligatorio.');
             return;
         }
 
         if (tipo_identificacion === 'Cédula') {
-            if (!validarCedula(identificacion)) {
+            if (!validarCedulaEcuatoriana(identificacion)) {
                 setError('La cédula no es válida (debe tener 10 dígitos y cumplir el algoritmo regional).');
                 return;
             }
@@ -118,21 +81,7 @@ const Clientes: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(form)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Error al guardar el registro');
-            }
-
-            const clienteGuardado = await response.json();
+            const clienteGuardado = await crearCliente(form);
 
             setClientes([clienteGuardado, ...clientes]);
             setSuccess(true);
@@ -145,8 +94,14 @@ const Clientes: React.FC = () => {
             });
 
             setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.error || err.response?.data?.message || 'Error al guardar el registro');
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Error al procesar la solicitud');
+            }
         } finally {
             setLoading(false);
         }
@@ -176,7 +131,10 @@ const Clientes: React.FC = () => {
 
                     <button 
                         className={showForm ? "btn-secondary" : "btn-primary"}
-                        onClick={() => setShowForm(!showForm)}
+                        onClick={() => {
+                            setShowForm(!showForm);
+                            setError('');
+                        }}
                     >
                         {showForm ? 'Cancelar' : '+ Añadir Cliente'}
                     </button>
@@ -253,7 +211,7 @@ const Clientes: React.FC = () => {
                                         value={form.identificacion}
                                         onChange={handleChange('identificacion')}
                                         maxLength={form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20}
-                                        placeholder={form.tipo_identificacion === 'Cédula' ? "10 dígitos" : "13 dígitos"}
+                                        placeholder={form.tipo_identificacion === 'Cédula' ? "10 dígitos" : form.tipo_identificacion === 'RUC' ? "13 dígitos" : "Mínimo 5 caracteres"}
                                         required
                                     />
                                 </div>
