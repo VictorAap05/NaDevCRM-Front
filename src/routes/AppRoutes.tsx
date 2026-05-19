@@ -5,6 +5,9 @@ import CrearUsuario from '../pages/Usuarios.tsx';
 import CrearCliente from '../pages/Clientes.tsx';
 import Login from '../pages/Login.tsx';
 import Audit from '../pages/Audit.tsx';
+import Oportunidad from '../pages/Oportunidades.tsx';
+import Areas from '../pages/Areas.tsx';
+
 
 const AppRoutes = () => {
   return (
@@ -15,7 +18,9 @@ const AppRoutes = () => {
         <Route path="/usuarios" element={<CrearUsuario />} />
         <Route path="/clientes" element={<CrearCliente />} />
         <Route path="/audit" element={<Audit />} />
+        <Route path="/oportunidades" element={<Oportunidad />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/areas" element={<Areas />} />
         <Route path="/" element={<Login />} />
       </Routes>
     </BrowserRouter>

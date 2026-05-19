@@ -49,6 +49,11 @@ const Navbar: React.FC<Props> = ({ user }) => {
         </button>
         <button className="nav-item" onClick={() => navigate('/audit')}>
           Auditoria
+        <button className="nav-item" onClick={() => navigate('/oportunidades')}>
+          Oportunidades
+        </button>
+        <button className="nav-item" onClick={() => navigate('/areas')}>
+          Areas
         </button>
       </div>
 
