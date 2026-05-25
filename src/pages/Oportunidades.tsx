@@ -24,6 +24,9 @@ const Oportunidades: React.FC = () => {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
+    // ESTADO  PARA LA TARJETA EXPANDIDA 
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
     const [form, setForm] = useState({
         cliente_id: '',
         nombre_contacto: '',
@@ -46,7 +49,6 @@ const Oportunidades: React.FC = () => {
 
         const fetchData = async () => {
             try {
-                // 3. AGREGAMOS OBTENER ÁREAS AL PROMISE.ALL
                 const [opsData, clientesData, usuariosData, areasData] = await Promise.all([
                     obtenerOportunidades().catch(() => [] as OportunidadListItem[]),
                     obtenerClientes().catch(() => [] as Cliente[]),
@@ -57,7 +59,7 @@ const Oportunidades: React.FC = () => {
                 setOportunidades(opsData);
                 setClientes(clientesData);
                 setUsuarios(usuariosData);
-                setAreas(areasData); // 4. SETEAMOS LAS ÁREAS REALES
+                setAreas(areasData); 
 
             } catch (err) {
                 console.error("Error cargando dependencias iniciales:", err);
@@ -71,6 +73,30 @@ const Oportunidades: React.FC = () => {
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
         setForm((f) => ({ ...f, [k]: e.target.value }));
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DEL CLIENTE ASOCIADO 
+    const getClienteNombre = (clienteId: string) => {
+        const match = clientes.find(c => c.id === clienteId);
+        return match ? match.cliente : 'Cliente no especificado';
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DE CUALQUIER USUARIO (RESPONSABLES) 
+    const getUsuarioNombre = (usuarioId?: string) => {
+        if (!usuarioId) return 'Sin asignar';
+        const match = usuarios.find(u => u.id === usuarioId);
+        return match ? match.nombre : 'Desconocido';
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DEL ÁREA
+    const getAreaNombre = (areaId: string) => {
+        const match = areas.find(a => a.id === areaId);
+        return match ? match.area : 'N/A';
+    };
+
+    // MANEJADOR DE EXPANSIÓN
+    const toggleExpand = (id: string) => {
+        setExpandedId(prev => (prev === id ? null : id));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -183,7 +209,6 @@ const Oportunidades: React.FC = () => {
                                     <select className="field-select" value={form.area_id} onChange={handleChange('area_id')} required>
                                         <option value="">Seleccione el área...</option>
                                         {areas.map(a => (
-                                            // 5. AQUÍ SE CAMBIA a.nombre POR a.area PARA QUE HAGA MATCH CON LA BD
                                             <option key={a.id} value={a.id}>{a.area}</option>
                                         ))}
                                     </select>
@@ -262,27 +287,106 @@ const Oportunidades: React.FC = () => {
                         {oportunidades.length === 0 ? (
                             <p style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>No hay oportunidades registradas aún.</p>
                         ) : (
-                            oportunidades.map((op) => (
-                                <div key={op.id} style={{
-                                    padding: '16px 20px', borderRadius: 12, background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                }}>
-                                    <div>
-                                        <h3 style={{ fontSize: 16, marginBottom: 4 }}>{op.nombre_oportunidad}</h3>
-                                        <p style={{ fontSize: 13, opacity: 0.6 }}>
-                                            Monto: ${op.monto_estimado} | Cierre: {op.fecha_cierre_esperada?.split('T')[0] || 'N/A'}
-                                        </p>
+                            oportunidades.map((op) => {
+                                const isExpanded = expandedId === op.id;
+                                return (
+                                    <div 
+                                        key={op.id} 
+                                        onClick={() => toggleExpand(op.id)}
+                                        style={{
+                                            padding: '20px', 
+                                            borderRadius: 12, 
+                                            background: isExpanded ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.03)',
+                                            border: isExpanded ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.07)', 
+                                            display: 'flex', 
+                                            flexDirection: 'column',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease-in-out'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <div>
+                                                <h3 style={{ fontSize: 18, marginBottom: 4, fontWeight: 600 }}>
+                                                    {op.nombre_oportunidad}
+                                                </h3>
+                                                <p style={{ fontSize: 14, opacity: 0.8, color: '#e2e8f0' }}>
+                                                    <strong>Cliente:</strong> {getClienteNombre(op.cliente_id)}
+                                                </p>
+                                                <p style={{ fontSize: 13, opacity: 0.5, marginTop: 2 }}>
+                                                    Monto: ${op.monto_estimado} | Cierre: {op.fecha_cierre_esperada?.split('T')[0] || 'N/A'}
+                                                </p>
+                                            </div>
+                                            <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <span className="badge" style={{ 
+                                                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 'bold',
+                                                    background: op.fase_venta === 'Cerrada Ganada' ? '#064e3b' : op.fase_venta === 'Propuesta' ? '#1e3a8a' : '#78350f',
+                                                    color: '#ffffff'
+                                                }}>
+                                                    {op.fase_venta}
+                                                </span>
+                                                <span style={{ fontSize: 12, opacity: 0.4 }}>
+                                                    {isExpanded ? '▲' : '▼'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* PANEL DETALLADO SÓLO SI SE DA CLICK */}
+                                        {isExpanded && (
+                                            <div 
+                                                onClick={(e) => e.stopPropagation()} // Evita que se cierre al hacer clic adentro
+                                                style={{ 
+                                                    marginTop: 20, 
+                                                    paddingTop: 16, 
+                                                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                                    gap: 16,
+                                                    fontSize: 14
+                                                }}
+                                            >
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Código</p>
+                                                    <p>{op.codigo_oportunidad || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Área Técnica</p>
+                                                    <p>{getAreaNombre(op.area_id)}</p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Probabilidad</p>
+                                                    <p>{op.probabilidad_venta || 'Media'}</p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Contacto Principal</p>
+                                                    <p>{op.nombre_contacto || 'N/A'}</p>
+                                                    {op.correo_contacto && <p style={{ fontSize: 12, opacity: 0.6 }}>{op.correo_contacto}</p>}
+                                                    {op.numero_contacto && <p style={{ fontSize: 12, opacity: 0.6 }}>{op.numero_contacto}</p>}
+                                                </div>
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Resp. Comercial</p>
+                                                    <p>{getUsuarioNombre(op.resp_comercial_id)}</p>
+                                                </div>
+                                                <div>
+                                                    <p style={{ opacity: 0.5, marginBottom: 2 }}>Resp. Técnico</p>
+                                                    <p>{getUsuarioNombre(op.resp_tecnico_id)}</p>
+                                                </div>
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <p style={{ opacity: 0.5, marginBottom: 4 }}>Descripción Detallada</p>
+                                                    <p style={{ 
+                                                        background: 'rgba(0,0,0,0.2)', 
+                                                        padding: 12, 
+                                                        borderRadius: 8, 
+                                                        lineHeight: 1.5,
+                                                        border: '1px solid rgba(255,255,255,0.03)' 
+                                                    }}>
+                                                        {op.descripcion || 'Sin descripción adicional para esta oportunidad.'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span className="badge" style={{ 
-                                            padding: '4px 10px', borderRadius: 20, fontSize: 12,
-                                            background: op.fase_venta === 'Cerrada Ganada' ? '#064e3b' : '#78350f' 
-                                        }}>
-                                            {op.fase_venta}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
