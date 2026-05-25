@@ -6,27 +6,49 @@ import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
 import { obtenerUsuarios, crearUsuario, type UserListItem } from '../services/usuarioService.ts';
 
-import { 
-    validarCedulaEcuatoriana, 
-    validarPassword, 
-    validarTelefonoEcuador, 
-    validarEmail 
+import {
+    validarCedulaEcuatoriana,
+    validarPassword,
+    validarTelefonoEcuador,
+    validarEmail,
+    validarNombreYApellido
 } from '../utils/validaciones';
 
+const IconEye = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+);
+
+const IconEyeOff = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+);
+
 const Usuarios = () => {
-    const userString = localStorage.getItem('user');
-    const user: Usuario | null = userString ? JSON.parse(userString) : null;
+    const [user] = useState<Usuario | null>(() => {
+        const userString = localStorage.getItem('user');
+        return userString ? JSON.parse(userString) : null;
+    });
 
     const [usuarios, setUsuarios] = useState<UserListItem[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
+
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     const [form, setForm] = useState({
         nombre: '',
         email: '',
         password: '',
+        passwordConfirm: '',
         rol: 'Responsable',
         cedula: '',
         telefono: '',
@@ -35,6 +57,7 @@ const Usuarios = () => {
 
     useEffect(() => {
         const cargarListaUsuarios = async () => {
+            setIsLoadingData(true);
             try {
                 const data = await obtenerUsuarios();
                 setUsuarios(data);
@@ -46,14 +69,18 @@ const Usuarios = () => {
                 } else {
                     setError('Error desconocido al cargar la lista');
                 }
+            } finally {
+                setIsLoadingData(false);
             }
         };
 
         if (user) {
             cargarListaUsuarios();
+        } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsLoadingData(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [user]);
 
     const handleChange = (k: keyof typeof form) => (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -66,53 +93,107 @@ const Usuarios = () => {
         }
     };
 
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
+        if (!validarNombreYApellido(form.nombre)) {
+            setError('Por favor, ingresa un nombre y apellido válidos (ej: Juan Pérez).');
+            setTimeout(() => scrollToTop(), 100);
+            return;
+        }
+
         if (!validarCedulaEcuatoriana(form.cedula)) {
             setError('La cédula ingresada no es válida para el territorio ecuatoriano.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         if (!validarTelefonoEcuador(form.telefono)) {
             setError('El teléfono debe tener 10 dígitos y empezar con 09.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         if (!validarEmail(form.email)) {
             setError('El formato del correo electrónico es incorrecto.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         if (!validarPassword(form.password)) {
             setError('La contraseña debe tener al menos 8 caracteres, una letra y un número.');
+            setTimeout(() => scrollToTop(), 100);
+            return;
+        }
+
+        if (form.password !== form.passwordConfirm) {
+            setError('Las contraseñas no coinciden.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         if (form.rol === 'Jefe de Area' && !form.areas) {
             setError('Debe asignar un área al Jefe de Área.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         setLoading(true);
 
         try {
-            const nuevoUsuario = await crearUsuario(form);
-            
+            const payload = {
+                nombre: form.nombre,
+                email: form.email,
+                password: form.password,
+                rol: form.rol,
+                cedula: form.cedula,
+                telefono: form.telefono,
+                areas: form.areas
+            };
+
+            const nuevoUsuario = await crearUsuario(payload);
+
             setUsuarios([nuevoUsuario, ...usuarios]);
             setSuccess(true);
             setShowForm(false);
-            setForm({ nombre: '', email: '', password: '', rol: 'Responsable', cedula: '', telefono: '', areas: '' });
+
+            setForm({
+                nombre: '',
+                email: '',
+                password: '',
+                passwordConfirm: '',
+                rol: 'Responsable',
+                cedula: '',
+                telefono: '',
+                areas: ''
+            });
+
+            setShowPassword(false);
+            setShowPasswordConfirm(false);
+
             setTimeout(() => setSuccess(false), 3000);
         } catch (err) {
             if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.error || err.response?.data?.message || 'Error al crear usuario');
+                setError(
+                    err.response?.data?.error ||
+                    err.response?.data?.message ||
+                    'Error al crear usuario'
+                );
             } else if (err instanceof Error) {
                 setError(err.message);
             } else {
                 setError('Error al procesar la solicitud');
             }
+
+            setTimeout(() => scrollToTop(), 100);
         } finally {
             setLoading(false);
         }
@@ -143,7 +224,7 @@ const Usuarios = () => {
                         <IconCheck /> Registro exitoso.
                     </div>
                 )}
-                
+
                 {error && (
                     <div className="error-box" style={{ marginBottom: 20, background: '#fff5f5', border: '1px solid #feb2b2', padding: '12px', borderRadius: '8px', color: '#c53030' }}>
                         <strong>Aviso:</strong> {error}
@@ -170,10 +251,59 @@ const Usuarios = () => {
                                     <label className="field-label">Email</label>
                                     <input className="field-input" type="email" value={form.email} onChange={handleChange('email')} placeholder="usuario@epn.edu.ec" required />
                                 </div>
+
                                 <div className="form-group">
                                     <label className="field-label">Contraseña</label>
-                                    <input className="field-input" type="password" value={form.password} onChange={handleChange('password')} placeholder="Min. 8 caracteres" required />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            className="field-input"
+                                            type={showPassword ? "text" : "password"}
+                                            value={form.password}
+                                            onChange={handleChange('password')}
+                                            placeholder="Min. 8 caracteres"
+                                            required
+                                            style={{ paddingRight: '40px', width: '100%' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            style={{
+                                                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                                                background: 'transparent', border: 'none', cursor: 'pointer', color: '#718096', padding: 0, display: 'flex'
+                                            }}
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? <IconEyeOff /> : <IconEye />}
+                                        </button>
+                                    </div>
                                 </div>
+
+                                <div className="form-group">
+                                    <label className="field-label">Confirmar Contraseña</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            className="field-input"
+                                            type={showPasswordConfirm ? "text" : "password"}
+                                            value={form.passwordConfirm}
+                                            onChange={handleChange('passwordConfirm')}
+                                            placeholder="Repite la contraseña"
+                                            required
+                                            style={{ paddingRight: '40px', width: '100%' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                                            style={{
+                                                position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                                                background: 'transparent', border: 'none', cursor: 'pointer', color: '#718096', padding: 0, display: 'flex'
+                                            }}
+                                            tabIndex={-1}
+                                        >
+                                            {showPasswordConfirm ? <IconEyeOff /> : <IconEye />}
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="form-group">
                                     <label className="field-label">Rol</label>
                                     <select className="field-select" value={form.rol} onChange={handleChange('rol')}>
@@ -206,18 +336,23 @@ const Usuarios = () => {
 
                 <div className="form-card">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {usuarios.length === 0 ? (
+                        {isLoadingData ? (
+                            <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <span className="spinner" style={{ width: 30, height: 30, borderWidth: 3, marginBottom: 15 }} />
+                                <p style={{ opacity: 0.6 }}>Cargando usuarios...</p>
+                            </div>
+                        ) : usuarios.length === 0 ? (
                             <p style={{ textAlign: 'center', opacity: 0.5 }}>No hay usuarios registrados.</p>
                         ) : (
                             usuarios.map((u) => (
-                                <div key={u.id} style={{ 
-                                    padding: '16px 20px', 
-                                    borderRadius: 12, 
-                                    background: 'rgba(255,255,255,0.03)', 
-                                    border: '1px solid rgba(255,255,255,0.07)', 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between', 
-                                    alignItems: 'center' 
+                                <div key={u.id} style={{
+                                    padding: '16px 20px',
+                                    borderRadius: 12,
+                                    background: 'rgba(255,255,255,0.03)',
+                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
                                 }}>
                                     <div>
                                         <h3 style={{ fontSize: 16, marginBottom: 4 }}>{u.nombre}</h3>
@@ -228,7 +363,7 @@ const Usuarios = () => {
                                             </p>
                                         )}
                                     </div>
-                                    <span className="role-badge" style={{ 
+                                    <span className="role-badge" style={{
                                         background: u.rol === 'Administrador' ? 'rgba(255, 78, 78, 0.1)' : 'rgba(79, 209, 197, 0.1)',
                                         color: u.rol === 'Administrador' ? '#ff4e4e' : '#4fd1c5',
                                         padding: '4px 12px',

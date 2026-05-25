@@ -36,3 +36,10 @@ export const validarRUC = (ruc: string): boolean => {
     
     return validarCedulaEcuatoriana(ruc.substring(0, 10));
 };
+
+export const validarNombreYApellido = (nombre: string): boolean => {
+    const nombreLimpio = nombre.trim();
+    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+(?:\s+[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]+)+$/;
+    
+    return regex.test(nombreLimpio);
+};

@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
+import React, { useState, useEffect, useRef } from 'react'; import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
@@ -10,8 +9,8 @@ import { obtenerUsuarios, type UserListItem } from '../services/usuarioService';
 import { obtenerAreas, type Area } from '../services/areaService';
 import axios from 'axios';
 
-// Importamos tus funciones de validación
-import { validarEmail, validarTelefonoEcuador } from '../utils/validaciones';
+// Importamos tus funciones de validación (AQUÍ AGREGAMOS validarNombreYApellido)
+import { validarEmail, validarTelefonoEcuador, validarNombreYApellido } from '../utils/validaciones';
 
 const Oportunidades: React.FC = () => {
     // 1. Estados
@@ -27,9 +26,11 @@ const Oportunidades: React.FC = () => {
 
     const [showForm, setShowForm] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(true);
-    const [loading, setLoading] = useState(false); 
+    const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
+    const [expandedId, setExpandedId] = useState<string | number | null>(null);
+    const errorRef = useRef<HTMLDivElement | null>(null);
 
     // ESTADO  PARA LA TARJETA EXPANDIDA 
 
@@ -90,7 +91,7 @@ const Oportunidades: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [user?.id]); 
+    }, [user?.id]);
 
     // 3. Funciones auxiliares y manejadores
     const formatCurrency = (value: string) => {
@@ -101,6 +102,14 @@ const Oportunidades: React.FC = () => {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
+    };
+    const scrollToError = () => {
+        setTimeout(() => {
+            errorRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
     };
 
     const handleChange = (k: keyof typeof form) => (
@@ -129,31 +138,38 @@ const Oportunidades: React.FC = () => {
     };
 
 
-
- 
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        
-        // VALIDACIONES FRONTEND ANTES DE ENVIAR AL BACKEND
+
+        if (form.nombre_contacto && !validarNombreYApellido(form.nombre_contacto)) {
+            setError('Por favor, ingresa al menos un nombre y un apellido válidos.');
+            scrollToError();
+            return;
+        }
+
         if (form.correo_contacto && !validarEmail(form.correo_contacto)) {
             setError('Por favor, ingresa un correo electrónico válido.');
+            scrollToError();
             return;
         }
 
         if (form.numero_contacto && !validarTelefonoEcuador(form.numero_contacto)) {
             setError('El número de contacto debe tener 10 dígitos y empezar con "09".');
+            scrollToError();
             return;
         }
 
-        const montoParseado = parseFloat(form.monto_estimado.replace(/,/g, '')) || 0;
+        const montoParseado = parseFloat(
+            form.monto_estimado.replace(/,/g, '')
+        ) || 0;
+
         if (montoParseado <= 0) {
             setError('El monto estimado debe ser mayor a $0.00.');
+            scrollToError();
             return;
         }
 
-        // Si pasa todas las validaciones
         setLoading(true);
 
         try {
@@ -173,6 +189,7 @@ const Oportunidades: React.FC = () => {
             const nuevaOportunidad = await crearOportunidad(payload);
 
             setOportunidades([nuevaOportunidad, ...oportunidades]);
+
             setSuccess(true);
             setShowForm(false);
 
@@ -194,14 +211,23 @@ const Oportunidades: React.FC = () => {
             });
 
             setTimeout(() => setSuccess(false), 3000);
+
         } catch (err) {
+
             if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.error || err.message || 'Error al guardar la oportunidad');
+                setError(
+                    err.response?.data?.error ||
+                    err.message ||
+                    'Error al guardar la oportunidad'
+                );
             } else if (err instanceof Error) {
                 setError(err.message);
             } else {
                 setError('Error desconocido al guardar la oportunidad');
             }
+
+            scrollToError();
+
         } finally {
             setLoading(false);
         }
@@ -231,12 +257,18 @@ const Oportunidades: React.FC = () => {
 
                 {error && (
                     <div
+                        ref={errorRef}
                         className="error-box"
                         style={{
                             marginBottom: 20,
                             background: '#ff000022',
-                            border: '1px solid red',
-                            padding: 10
+                            border: '1px solid #ff4d4f',
+                            padding: 14,
+                            borderRadius: 10,
+                            color: '#fff',
+                            fontWeight: 500,
+                            scrollMarginTop: '120px',
+                            boxShadow: '0 0 10px rgba(255,0,0,0.2)'
                         }}
                     >
                         <strong>Error:</strong> {error}
@@ -499,48 +531,222 @@ const Oportunidades: React.FC = () => {
                                 No hay oportunidades registradas aún.
                             </p>
                         ) : (
-                            oportunidades.map((op) => (
-                                <div
-                                    key={op.id}
-                                    style={{
-                                        padding: '16px 20px',
-                                        borderRadius: 12,
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid rgba(255,255,255,0.07)',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <div>
-                                        <h3 style={{ fontSize: 16, marginBottom: 4 }}>
-                                            {op.nombre_oportunidad}
-                                        </h3>
+                            oportunidades.map((op) => {
+                                const cliente = clientes.find(c => c.id === op.cliente_id);
+                                const area = areas.find(a => a.id === op.area_id);
+                                const respComercial = usuarios.find(u => u.id === op.resp_comercial_id);
+                                const respTecnico = usuarios.find(u => u.id === op.resp_tecnico_id);
 
-                                        <p style={{ fontSize: 13, opacity: 0.6 }}>
-                                            Monto: ${op.monto_estimado} | Cierre:{' '}
-                                            {op.fecha_cierre_esperada?.split('T')[0] || 'N/A'}
-                                        </p>
-                                    </div>
+                                const expanded = expandedId === op.id;
 
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span
-                                            className="badge"
+                                return (
+                                    <div
+                                        key={op.id}
+                                        style={{
+                                            borderRadius: 12,
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.07)',
+                                            overflow: 'hidden',
+                                            transition: '0.3s'
+                                        }}
+                                    >
+                                        {/* HEADER */}
+                                        <div
+                                            onClick={() =>
+                                                setExpandedId(expanded ? null : op.id)
+                                            }
                                             style={{
-                                                padding: '4px 10px',
-                                                borderRadius: 20,
-                                                fontSize: 12,
-                                                background:
-                                                    op.fase_venta === 'Cerrada Ganada'
-                                                        ? '#064e3b'
-                                                        : '#78350f'
+                                                padding: '16px 20px',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                cursor: 'pointer',
+                                                gap: 20,
+                                                flexWrap: 'wrap'
                                             }}
                                         >
-                                            {op.fase_venta}
-                                        </span>
+                                            <div style={{ flex: 1 }}>
+                                                <h3 style={{ fontSize: 16, marginBottom: 6 }}>
+                                                    {op.nombre_oportunidad}
+                                                </h3>
+
+                                                <p
+                                                    style={{
+                                                        fontSize: 13,
+                                                        opacity: 0.7,
+                                                        display: 'flex',
+                                                        flexWrap: 'wrap',
+                                                        gap: 12
+                                                    }}
+                                                >
+                                                    <span>
+                                                        <strong>Cliente:</strong>{' '}
+                                                        {cliente?.cliente || 'No asignado'}
+                                                    </span>
+
+                                                    <span>
+                                                        <strong>Monto:</strong> $
+                                                        {Number(op.monto_estimado).toLocaleString(
+                                                            'en-US',
+                                                            {
+                                                                minimumFractionDigits: 2,
+                                                                maximumFractionDigits: 2
+                                                            }
+                                                        )}
+                                                    </span>
+
+                                                    <span>
+                                                        <strong>Cierre:</strong>{' '}
+                                                        {op.fecha_cierre_esperada?.split('T')[0] || 'N/A'}
+                                                    </span>
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 12
+                                                }}
+                                            >
+                                                <span
+                                                    className="badge"
+                                                    style={{
+                                                        padding: '4px 10px',
+                                                        borderRadius: 20,
+                                                        fontSize: 12,
+                                                        background:
+                                                            op.fase_venta === 'Cerrada Ganada'
+                                                                ? '#064e3b'
+                                                                : '#78350f'
+                                                    }}
+                                                >
+                                                    {op.fase_venta}
+                                                </span>
+
+                                                <span
+                                                    style={{
+                                                        fontSize: 18,
+                                                        transform: expanded
+                                                            ? 'rotate(180deg)'
+                                                            : 'rotate(0deg)',
+                                                        transition: '0.3s'
+                                                    }}
+                                                >
+                                                    ▼
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* CONTENIDO EXPANDIDO */}
+                                        {expanded && (
+                                            <div
+                                                style={{
+                                                    borderTop: '1px solid rgba(255,255,255,0.07)',
+                                                    padding: 20,
+                                                    display: 'grid',
+                                                    gridTemplateColumns:
+                                                        'repeat(auto-fit, minmax(240px, 1fr))',
+                                                    gap: 18,
+                                                    background: 'rgba(255,255,255,0.02)'
+                                                }}
+                                            >
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Código
+                                                    </p>
+                                                    <strong>
+                                                        {op.codigo_oportunidad || 'N/A'}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Área
+                                                    </p>
+                                                    <strong>{area?.area || 'N/A'}</strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Probabilidad
+                                                    </p>
+                                                    <strong>{op.probabilidad_venta}</strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Responsable Comercial
+                                                    </p>
+                                                    <strong>
+                                                        {respComercial?.nombre || 'Sin asignar'}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Responsable Técnico
+                                                    </p>
+                                                    <strong>
+                                                        {respTecnico?.nombre || 'Sin asignar'}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Contacto
+                                                    </p>
+                                                    <strong>
+                                                        {op.nombre_contacto || 'N/A'}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Correo
+                                                    </p>
+                                                    <strong>
+                                                        {op.correo_contacto || 'N/A'}
+                                                    </strong>
+                                                </div>
+
+                                                <div>
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Teléfono
+                                                    </p>
+                                                    <strong>
+                                                        {op.numero_contacto || 'N/A'}
+                                                    </strong>
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        gridColumn: '1 / -1'
+                                                    }}
+                                                >
+                                                    <p style={{ opacity: 0.6, fontSize: 12 }}>
+                                                        Descripción
+                                                    </p>
+
+                                                    <div
+                                                        style={{
+                                                            marginTop: 6,
+                                                            padding: 14,
+                                                            borderRadius: 10,
+                                                            background:
+                                                                'rgba(255,255,255,0.03)',
+                                                            lineHeight: 1.5
+                                                        }}
+                                                    >
+                                                        {op.descripcion ||
+                                                            'Sin descripción'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            )) // ✨ AQUI SE APLICÓ LA CORRECCIÓN
+                                );
+                            })
                         )}
                     </div>
                 </div>
