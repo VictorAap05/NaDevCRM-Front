@@ -31,6 +31,9 @@ const Oportunidades: React.FC = () => {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
+    // ESTADO  PARA LA TARJETA EXPANDIDA 
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
     const [form, setForm] = useState({
         cliente_id: '',
         nombre_contacto: '',
@@ -124,6 +127,30 @@ const Oportunidades: React.FC = () => {
             ...f,
             [k]: value
         }));
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DEL CLIENTE ASOCIADO 
+    const getClienteNombre = (clienteId: string) => {
+        const match = clientes.find(c => c.id === clienteId);
+        return match ? match.cliente : 'Cliente no especificado';
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DE CUALQUIER USUARIO (RESPONSABLES) 
+    const getUsuarioNombre = (usuarioId?: string) => {
+        if (!usuarioId) return 'Sin asignar';
+        const match = usuarios.find(u => u.id === usuarioId);
+        return match ? match.nombre : 'Desconocido';
+    };
+
+    // FUNCIÓN PARA OBTENER EL NOMBRE DEL ÁREA
+    const getAreaNombre = (areaId: string) => {
+        const match = areas.find(a => a.id === areaId);
+        return match ? match.area : 'N/A';
+    };
+
+    // MANEJADOR DE EXPANSIÓN
+    const toggleExpand = (id: string) => {
+        setExpandedId(prev => (prev === id ? null : id));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -346,9 +373,7 @@ const Oportunidades: React.FC = () => {
                                     >
                                         <option value="">Seleccione el área...</option>
                                         {areas.map(a => (
-                                            <option key={a.id} value={a.id}>
-                                                {a.area}
-                                            </option>
+                                            <option key={a.id} value={a.id}>{a.area}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -535,8 +560,8 @@ const Oportunidades: React.FC = () => {
                                             {op.fase_venta}
                                         </span>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
