@@ -1,24 +1,28 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // <-- 1. IMPORTADO PARA REDIRECCIÓN
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
 import { obtenerClientes, crearCliente, type Cliente } from '../services/clienteService';
-import { obtenerOportunidades, type OportunidadListItem } from '../services/oportunidadService'; // <-- 2. IMPORTADO PARA RELACIONAR DATOS
+import { obtenerOportunidades, type OportunidadListItem } from '../services/oportunidadService';
 import { validarCedulaEcuatoriana, validarRUC } from '../utils/validaciones';
 
 const Clientes = () => {
-    const navigate = useNavigate(); // <-- 3. NAVEGADOR INSTANCIADO
-    const userString = localStorage.getItem('user');
-    const user: Usuario | null = userString ? JSON.parse(userString) : null;
+    const navigate = useNavigate();
+    
+    const [user] = useState<Usuario | null>(() => {
+        const userString = localStorage.getItem('user');
+        return userString ? JSON.parse(userString) : null;
+    });
 
     const [clientes, setClientes] = useState<Cliente[]>([]);
-    const [oportunidades, setOportunidades] = useState<OportunidadListItem[]>([]); // <-- 4. ESTADO PARA RECOLECTAR OPS
-    const [expandedClienteId, setExpandedClienteId] = useState<string | null>(null); // <-- 5. ESTADO PARA CONTROLAR EL DESPLEGABLE
+    const [oportunidades, setOportunidades] = useState<OportunidadListItem[]>([]);
+    const [expandedClienteId, setExpandedClienteId] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
 
@@ -31,8 +35,8 @@ const Clientes = () => {
 
     useEffect(() => {
         const fetchDatosIniciales = async () => {
+            setIsLoadingData(true);
             try {
-                // 6. SOLICITUD PARALELA DE CLIENTES Y OPORTUNIDADES
                 const [clientesData, opsData] = await Promise.all([
                     obtenerClientes(),
                     obtenerOportunidades().catch(() => [] as OportunidadListItem[])
@@ -47,17 +51,30 @@ const Clientes = () => {
                 } else {
                     setError('Error desconocido al cargar la lista');
                 }
+            } finally {
+                setIsLoadingData(false);
             }
         };
 
-        if (user) fetchDatosIniciales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        if (user) {
+            fetchDatosIniciales();
+        } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsLoadingData(false);
+        }
+    }, [user?.id]);
 
     const handleChange = (k: keyof typeof form) => (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
         setForm((f) => ({ ...f, [k]: e.target.value }));
+    };
+
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -68,22 +85,26 @@ const Clientes = () => {
 
         if (!cliente.trim()) {
             setError('El nombre del cliente es obligatorio.');
+            setTimeout(() => scrollToTop(), 100);
             return;
         }
 
         if (tipo_identificacion === 'Cédula') {
             if (!validarCedulaEcuatoriana(identificacion)) {
                 setError('La cédula no es válida (debe tener 10 dígitos y cumplir el algoritmo regional).');
+                setTimeout(() => scrollToTop(), 100);
                 return;
             }
         } else if (tipo_identificacion === 'RUC') {
             if (!validarRUC(identificacion)) {
                 setError('El RUC no es válido (debe tener 13 dígitos y terminar en un establecimiento válido como 001).');
+                setTimeout(() => scrollToTop(), 100);
                 return;
             }
         } else if (tipo_identificacion === 'Pasaporte') {
             if (identificacion.length < 5) {
                 setError('El número de pasaporte es demasiado corto.');
+                setTimeout(() => scrollToTop(), 100);
                 return;
             }
         }
@@ -112,6 +133,7 @@ const Clientes = () => {
             } else {
                 setError('Error al procesar la solicitud');
             }
+            setTimeout(() => scrollToTop(), 100);
         } finally {
             setLoading(false);
         }
@@ -198,11 +220,15 @@ const Clientes = () => {
 
                 <div className="form-card">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {clientes.length === 0 ? (
+                        {isLoadingData ? (
+                            <div style={{ textAlign: 'center', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <span className="spinner" style={{ width: 30, height: 30, borderWidth: 3, marginBottom: 15 }} />
+                                <p style={{ opacity: 0.6 }}>Cargando clientes...</p>
+                            </div>
+                        ) : clientes.length === 0 ? (
                             <p style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>No se encontraron datos en la base.</p>
                         ) : (
                             clientes.map((c) => {
-                                // 7. FILTRAMOS LAS OPORTUNIDADES DEL CLIENTE ACTUAL
                                 const clientOps = oportunidades.filter(op => op.cliente_id === c.id);
                                 const isExpanded = expandedClienteId === c.id;
 
@@ -215,11 +241,10 @@ const Clientes = () => {
                                             background: 'rgba(255,255,255,0.03)',
                                             border: isExpanded ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.07)',
                                             display: 'flex',
-                                            flexDirection: 'column', // MODIFICADO A COLUMN PARA SUB-CONTENIDOS
+                                            flexDirection: 'column',
                                             gap: 12
                                         }}
                                     >
-                                        {/* ENCABEZADO DE TARJETA */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                                             <div>
                                                 <h3 style={{ fontSize: 16, marginBottom: 4 }}>{c.cliente}</h3>
@@ -232,7 +257,6 @@ const Clientes = () => {
                                                     {c.tipo}
                                                 </span>
 
-                                                {/* 8. BOTÓN INTERACTIVO PARA VER OPORTUNIDADES */}
                                                 <button 
                                                     onClick={() => setExpandedClienteId(isExpanded ? null : c.id)}
                                                     style={{
@@ -251,7 +275,6 @@ const Clientes = () => {
                                             </div>
                                         </div>
 
-                                        {/* 9. SUB-PANEL DESPLEGABLE CON LAS OPORTUNIDADES */}
                                         {isExpanded && (
                                             <div style={{ padding: '12px 0 4px 0', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                 <p style={{ fontSize: 13, opacity: 0.5, fontWeight: 500 }}>Oportunidades Comerciales:</p>
@@ -274,7 +297,6 @@ const Clientes = () => {
                                                             ))}
                                                         </div>
                                                         
-                                                        {/* BOTÓN PARA REDIRECCIÓN AL MÓDULO */}
                                                         <button
                                                             onClick={() => navigate('/oportunidades')}
                                                             style={{ alignSelf: 'flex-start', marginTop: 6, background: 'transparent', color: '#33b5e5', border: 'none', cursor: 'pointer', fontSize: 13, padding: '4px 0', textDecoration: 'underline' }}
