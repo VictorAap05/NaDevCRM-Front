@@ -46,44 +46,45 @@ const Audit = () => {
         });
     };
 
-    const getColorAccion = (accion: string) => {
-        switch (accion) {
-            case 'INSERT': return 'color-green';
-            case 'UPDATE': return 'color-blue';
-            case 'DELETE': return 'color-red';
-            default: return '';
-        }
-    };
 
     if (!user) return null; 
 
-    const obtenerDiferencias = (oldData: any, newData: any) => {
-    if (!oldData && !newData) return <span>Sin datos</span>;
+    type JsonObject = Record<string, unknown>;
+
+    const obtenerDiferencias = (oldData: JsonObject | null, newData: JsonObject | null) => {
+        if (!oldData && !newData) return <span>Sin datos</span>;
     
-    // INSERT
-    if (!oldData && newData) {
-        return (
-            <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
-                {Object.entries(newData).map(([key, val]) => (
-                    <li key={key}><strong>{key}:</strong> {String(val)}</li>
-                ))}
-            </ul>
-        );
-    }
+        // INSERT
+        if (!oldData && newData) {
+            return (
+                <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
+                    {Object.entries(newData).map(([key, val]) => (
+                        <li key={key}>
+                            <strong>{key}:</strong> {String(val)}
+                        </li>
+                    ))}
+                </ul>
+            );
+        }
 
     // DELETE
     if (oldData && !newData) {
         return (
             <ul style={{ margin: 0, padding: 0, listStyleType: 'none', opacity: 0.7 }}>
                 {Object.entries(oldData).map(([key, val]) => (
-                    <li key={key}><strong>{key}:</strong> {String(val)}</li>
+                    <li key={key}>
+                        <strong>{key}:</strong> {String(val)}
+                    </li>
                 ))}
             </ul>
         );
     }
 
-    // UPDATE: Solo iteramos sobre datos que ya vienen limpios de la base
-    const diferencias: Array<{ campo: string; antes: any; ahora: any }> = [];
+    if (!oldData || !newData) {
+        return <span style={{ opacity: 0.5 }}>Cambios en campos técnicos menores</span>;
+    }
+    
+    const diferencias: Array<{ campo: string; antes: unknown; ahora: unknown }> = [];
 
     Object.keys(newData).forEach((key) => {
         if (String(oldData[key]) !== String(newData[key])) {
@@ -98,7 +99,9 @@ const Audit = () => {
             {diferencias.map((diff) => (
                 <li key={diff.campo}>
                     <strong style={{ textTransform: 'capitalize' }}>{diff.campo}:</strong>{' '}
-                    <span style={{ color: '#ff4444', textDecoration: 'line-through', marginRight: 6 }}>{String(diff.antes)}</span>
+                    <span style={{ color: '#ff4444', textDecoration: 'line-through', marginRight: 6 }}>
+                        {String(diff.antes)}
+                    </span>
                     <span style={{ color: '#00c851' }}>➔ {String(diff.ahora)}</span>
                 </li>
             ))}

@@ -1,17 +1,22 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // <-- 1. IMPORTADO PARA REDIRECCIÓN
 import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
 import { obtenerClientes, crearCliente, type Cliente } from '../services/clienteService';
+import { obtenerOportunidades, type OportunidadListItem } from '../services/oportunidadService'; // <-- 2. IMPORTADO PARA RELACIONAR DATOS
 import { validarCedulaEcuatoriana, validarRUC } from '../utils/validaciones';
 
 const Clientes = () => {
+    const navigate = useNavigate(); // <-- 3. NAVEGADOR INSTANCIADO
     const userString = localStorage.getItem('user');
     const user: Usuario | null = userString ? JSON.parse(userString) : null;
 
     const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [oportunidades, setOportunidades] = useState<OportunidadListItem[]>([]); // <-- 4. ESTADO PARA RECOLECTAR OPS
+    const [expandedClienteId, setExpandedClienteId] = useState<string | null>(null); // <-- 5. ESTADO PARA CONTROLAR EL DESPLEGABLE
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -25,13 +30,18 @@ const Clientes = () => {
     });
 
     useEffect(() => {
-        const fetchClientes = async () => {
+        const fetchDatosIniciales = async () => {
             try {
-                const data = await obtenerClientes();
-                setClientes(data);
+                // 6. SOLICITUD PARALELA DE CLIENTES Y OPORTUNIDADES
+                const [clientesData, opsData] = await Promise.all([
+                    obtenerClientes(),
+                    obtenerOportunidades().catch(() => [] as OportunidadListItem[])
+                ]);
+                setClientes(clientesData);
+                setOportunidades(opsData);
             } catch (err) {
                 if (axios.isAxiosError(err)) {
-                    setError(err.response?.data?.message || 'Error al cargar clientes');
+                    setError(err.response?.data?.message || 'Error al cargar la información');
                 } else if (err instanceof Error) {
                     setError(err.message);
                 } else {
@@ -40,7 +50,7 @@ const Clientes = () => {
             }
         };
 
-        if (user) fetchClientes();
+        if (user) fetchDatosIniciales();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -114,19 +124,10 @@ const Clientes = () => {
             <Navbar user={user} />
 
             <div className="page-content">
-                <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 28,
-                    flexWrap: 'wrap',
-                    gap: 16
-                }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
                     <div>
                         <p className="eyebrow">Directorio de Entidades</p>
-                        <h1 className="page-title" style={{ fontSize: 32, marginBottom: 0 }}>
-                            Clientes
-                        </h1>
+                        <h1 className="page-title" style={{ fontSize: 32, marginBottom: 0 }}>Clientes</h1>
                     </div>
 
                     <button 
@@ -141,30 +142,13 @@ const Clientes = () => {
                 </div>
 
                 {error && (
-                    <div className="error-box" style={{ 
-                        marginBottom: 20, 
-                        background: 'rgba(255, 0, 0, 0.1)', 
-                        border: '1px solid #ff4444', 
-                        padding: '12px 16px',
-                        color: '#ff4444',
-                        borderRadius: 8
-                    }}>
+                    <div className="error-box" style={{ marginBottom: 20, background: 'rgba(255, 0, 0, 0.1)', border: '1px solid #ff4444', padding: '12px 16px', color: '#ff4444', borderRadius: 8 }}>
                         <strong>Error:</strong> {error}
                     </div>
                 )}
                 
                 {success && (
-                    <div className="success-banner" style={{ 
-                        marginBottom: 20, 
-                        background: 'rgba(0, 255, 100, 0.1)',
-                        border: '1px solid #00c851',
-                        padding: '12px 16px',
-                        color: '#00c851',
-                        borderRadius: 8,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8
-                    }}>
+                    <div className="success-banner" style={{ marginBottom: 20, background: 'rgba(0, 255, 100, 0.1)', border: '1px solid #00c851', padding: '12px 16px', color: '#00c851', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <IconCheck /> Cliente registrado correctamente.
                     </div>
                 )}
@@ -176,14 +160,7 @@ const Clientes = () => {
                             <div className="form-grid">
                                 <div className="form-group full">
                                     <label className="field-label">Nombre del Cliente / Razón Social</label>
-                                    <input
-                                        className="field-input"
-                                        type="text"
-                                        value={form.cliente}
-                                        onChange={handleChange('cliente')}
-                                        placeholder="Ej: Corporación X"
-                                        required
-                                    />
+                                    <input className="field-input" type="text" value={form.cliente} onChange={handleChange('cliente')} placeholder="Ej: Corporación X" required />
                                 </div>
 
                                 <div className="form-group">
@@ -205,15 +182,7 @@ const Clientes = () => {
 
                                 <div className="form-group full">
                                     <label className="field-label">Número de Identificación</label>
-                                    <input
-                                        className="field-input"
-                                        type="text"
-                                        value={form.identificacion}
-                                        onChange={handleChange('identificacion')}
-                                        maxLength={form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20}
-                                        placeholder={form.tipo_identificacion === 'Cédula' ? "10 dígitos" : form.tipo_identificacion === 'RUC' ? "13 dígitos" : "Mínimo 5 caracteres"}
-                                        required
-                                    />
+                                    <input className="field-input" type="text" value={form.identificacion} onChange={handleChange('identificacion')} maxLength={form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20} placeholder={form.tipo_identificacion === 'Cédula' ? "10 dígitos" : form.tipo_identificacion === 'RUC' ? "13 dígitos" : "Mínimo 5 caracteres"} required />
                                 </div>
                             </div>
 
@@ -232,36 +201,93 @@ const Clientes = () => {
                         {clientes.length === 0 ? (
                             <p style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>No se encontraron datos en la base.</p>
                         ) : (
-                            clientes.map((c) => (
-                                <div key={c.id} style={{
-                                    padding: '16px 20px',
-                                    borderRadius: 12,
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.07)',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <div>
-                                        <h3 style={{ fontSize: 16, marginBottom: 4 }}>{c.cliente}</h3>
-                                        <p style={{ fontSize: 13, opacity: 0.6 }}>
-                                            {c.tipo_identificacion}: {c.identificacion}
-                                        </p>
+                            clientes.map((c) => {
+                                // 7. FILTRAMOS LAS OPORTUNIDADES DEL CLIENTE ACTUAL
+                                const clientOps = oportunidades.filter(op => op.cliente_id === c.id);
+                                const isExpanded = expandedClienteId === c.id;
+
+                                return (
+                                    <div 
+                                        key={c.id} 
+                                        style={{
+                                            padding: '16px 20px', 
+                                            borderRadius: 12, 
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: isExpanded ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,0.07)',
+                                            display: 'flex',
+                                            flexDirection: 'column', // MODIFICADO A COLUMN PARA SUB-CONTENIDOS
+                                            gap: 12
+                                        }}
+                                    >
+                                        {/* ENCABEZADO DE TARJETA */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <div>
+                                                <h3 style={{ fontSize: 16, marginBottom: 4 }}>{c.cliente}</h3>
+                                                <p style={{ fontSize: 13, opacity: 0.6 }}>
+                                                    {c.tipo_identificacion}: {c.identificacion}
+                                                </p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <span className={`badge ${c.tipo === 'Público' ? 'badge-blue' : 'badge-green'}`} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, background: c.tipo === 'Público' ? '#1e3a8a' : '#064e3b', color: 'white' }}>
+                                                    {c.tipo}
+                                                </span>
+
+                                                {/* 8. BOTÓN INTERACTIVO PARA VER OPORTUNIDADES */}
+                                                <button 
+                                                    onClick={() => setExpandedClienteId(isExpanded ? null : c.id)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        borderRadius: 8,
+                                                        fontSize: 12,
+                                                        fontWeight: 500,
+                                                        background: isExpanded ? 'rgba(255,255,255,0.1)' : 'rgba(51,181,229,0.15)',
+                                                        color: isExpanded ? 'white' : '#33b5e5',
+                                                        border: isExpanded ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(51,181,229,0.3)',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {isExpanded ? 'Ocultar Ops ▲' : `Ops (${clientOps.length}) ▼`}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* 9. SUB-PANEL DESPLEGABLE CON LAS OPORTUNIDADES */}
+                                        {isExpanded && (
+                                            <div style={{ padding: '12px 0 4px 0', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                <p style={{ fontSize: 13, opacity: 0.5, fontWeight: 500 }}>Oportunidades Comerciales:</p>
+                                                
+                                                {clientOps.length === 0 ? (
+                                                    <p style={{ fontSize: 13, opacity: 0.4, fontStyle: 'italic', paddingLeft: 4 }}>
+                                                        No existen oportunidades vinculadas a este cliente actualmente.
+                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                            {clientOps.map(op => (
+                                                                <div key={op.id} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,0,0,0.15)', padding: '10px 14px', borderRadius: 8, fontSize: 13, border: '1px solid rgba(255,255,255,0.02)' }}>
+                                                                    <span><strong>{op.nombre_oportunidad}</strong></span>
+                                                                    <div style={{ display: 'flex', gap: 14, opacity: 0.8 }}>
+                                                                        <span>${op.monto_estimado}</span>
+                                                                        <span style={{ color: 'var(--accent)' }}>{op.fase_venta}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        
+                                                        {/* BOTÓN PARA REDIRECCIÓN AL MÓDULO */}
+                                                        <button
+                                                            onClick={() => navigate('/oportunidades')}
+                                                            style={{ alignSelf: 'flex-start', marginTop: 6, background: 'transparent', color: '#33b5e5', border: 'none', cursor: 'pointer', fontSize: 13, padding: '4px 0', textDecoration: 'underline' }}
+                                                        >
+                                                            Ver detalles en el módulo de oportunidades ➔
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span className={`badge ${c.tipo === 'Público' ? 'badge-blue' : 'badge-green'}`} 
-                                              style={{ 
-                                                  padding: '4px 10px', 
-                                                  borderRadius: 20, 
-                                                  fontSize: 12,
-                                                  background: c.tipo === 'Público' ? '#1e3a8a' : '#064e3b',
-                                                  color: 'white'
-                                              }}>
-                                            {c.tipo}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
