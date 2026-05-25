@@ -43,18 +43,17 @@ const Navbar: React.FC<Props> = ({ user }) => {
         <button className="nav-item" onClick={() => navigate('/usuarios')}>
           Usuarios
         </button>
-
         <button className="nav-item" onClick={() => navigate('/clientes')}>
           Clientes
-        </button>
-        <button className="nav-item" onClick={() => navigate('/audit')}>
-          Auditoria
         </button>
         <button className="nav-item" onClick={() => navigate('/oportunidades')}>
           Oportunidades
         </button>
         <button className="nav-item" onClick={() => navigate('/areas')}>
           Areas
+        </button>
+         <button className="nav-item" onClick={() => navigate('/audit')}>
+          Auditoría
         </button>
       </div>
 
