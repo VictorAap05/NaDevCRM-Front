@@ -8,6 +8,7 @@ import { obtenerOportunidades, crearOportunidad, type OportunidadListItem, type 
 import { obtenerClientes, type Cliente } from '../services/clienteService';
 import { obtenerUsuarios, type UserListItem } from '../services/usuarioService';
 import { obtenerAreas, type Area } from '../services/areaService'; 
+import axios from 'axios'; 
 
 const Oportunidades: React.FC = () => {
     const userString = localStorage.getItem('user');
@@ -105,8 +106,14 @@ const Oportunidades: React.FC = () => {
             });
 
             setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.error || err.message || 'Error al guardar la oportunidad');
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.error || err.message || 'Error al guardar la oportunidad');
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Error desconocido al guardar la oportunidad');
+            }
         } finally {
             setLoading(false);
         }
