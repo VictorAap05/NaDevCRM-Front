@@ -4,6 +4,7 @@ import type { Usuario } from '../types/auth';
 import IconCheck from '../components/icons/IconCheck';
 import IconSend from '../components/icons/IconSend';
 import { obtenerAreas, crearArea, type Area, type NuevaAreaDTO } from '../services/areaService';
+import axios from 'axios'; 
 
 const Areas: React.FC = () => {
     const userString = localStorage.getItem('user');
@@ -39,7 +40,7 @@ const Areas: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        
+
         if (!form.area.trim()) {
             setError('El nombre del área es obligatorio');
             return;
@@ -56,8 +57,14 @@ const Areas: React.FC = () => {
             setForm({ area: '' });
 
             setTimeout(() => setSuccess(false), 3000);
-        } catch (err: any) {
-            setError(err.response?.data?.error || err.message || 'Error al guardar el área');
+        } catch (err) { 
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.error || err.message || 'Error al guardar el área');
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Error desconocido al guardar el área');
+            }
         } finally {
             setLoading(false);
         }
@@ -75,7 +82,7 @@ const Areas: React.FC = () => {
                         <p className="eyebrow">Configuración del Sistema</p>
                         <h1 className="page-title" style={{ fontSize: 32, marginBottom: 0 }}>Gestión de Áreas</h1>
                     </div>
-                    <button 
+                    <button
                         className={showForm ? "btn-secondary" : "btn-primary"}
                         onClick={() => setShowForm(!showForm)}
                     >
@@ -93,13 +100,13 @@ const Areas: React.FC = () => {
                             <div className="form-grid">
                                 <div className="form-group full">
                                     <label className="field-label">Nombre del Área *</label>
-                                    <input 
-                                        className="field-input" 
-                                        type="text" 
-                                        value={form.area} 
-                                        onChange={handleChange} 
-                                        required 
-                                        placeholder="Ej: Recursos Humanos" 
+                                    <input
+                                        className="field-input"
+                                        type="text"
+                                        value={form.area}
+                                        onChange={handleChange}
+                                        required
+                                        placeholder="Ej: Recursos Humanos"
                                     />
                                 </div>
                             </div>

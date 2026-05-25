@@ -2,7 +2,7 @@ import Navbar from '../components/Navbar';
 import type { Usuario } from '../types/auth';
 
 // Importación de las vistas por rol
-import DashboardAdmin from '../pages/dashboardAdmin';
+import DashboardAdmin from '../pages/DashboardAdmin';
 import DashboardJefeArea from '../pages/DashboardJefeArea';
 import DashboardResponsable from '../pages/DashboardResponsable';
 
