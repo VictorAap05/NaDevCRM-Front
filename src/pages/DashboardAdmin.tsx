@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import type { Usuario } from '../types/auth';
-// Subimos un nivel a 'src' para entrar a 'services'
-import { obtenerEstadisticasDashboard, type DashboardStats } from '../services/dashboardService';
+import { obtenerEstadisticasAdmin, type AdminDashboardStats } from '../services/dashboardService';
 
-// Estilo CSS para los iconos de fondo de las tarjetas
 const backgroundIconStyle: React.CSSProperties = {
   position: 'absolute',
   right: 20,
@@ -15,21 +13,19 @@ const backgroundIconStyle: React.CSSProperties = {
 };
 
 const DashboardAdmin = ({ user }: { user: Usuario }) => {
-  // Estados para el control de la vista y los datos del dashboard
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Efecto para cargar las estadísticas al montar el componente
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const data = await obtenerEstadisticasDashboard();
+        const data = await obtenerEstadisticasAdmin();
         setStats(data);
       } catch (err) {
         if (axios.isAxiosError(err)) {
-          setError(err.response?.data?.message || 'Error al cargar métricas del dashboard');
+          setError(err.response?.data?.message || 'Error al cargar métricas del administrador');
         } else if (err instanceof Error) {
           setError(err.message);
         } else {
@@ -46,16 +42,16 @@ const DashboardAdmin = ({ user }: { user: Usuario }) => {
   return (
     <div className="page-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '80vh', justifyContent: 'center' }}>
       
-      {/* Mensaje original de bienvenida */}
+      {/* Mensaje de bienvenida original */}
       <h1 className="page-title" style={{ marginBottom: 8, textAlign: 'center' }}>
         Bienvenida al <em>CRM</em>
       </h1>
       
       <p style={{ opacity: 0.7, fontSize: 14, marginBottom: 40, textAlign: 'center' }}>
-        Hola, {user.nombre || 'Administrador'}. Aquí tienes el resumen de la gestión global de oportunidades.
+        Hola, {user.nombre || 'Administrador'}. Resumen de control global del sistema.
       </p>
 
-      {/* Manejo de errores en la API */}
+      {/* Control de Errores */}
       {error && (
         <div className="error-box" style={{ 
           marginBottom: 20, 
@@ -71,66 +67,66 @@ const DashboardAdmin = ({ user }: { user: Usuario }) => {
         </div>
       )}
 
-      {/* Pantalla de carga o renderizado de las métricas */}
+      {/* Renderizado Condicional */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.6 }}>
           <span className="spinner" style={{ display: 'inline-block', marginBottom: 12 }} />
-          <p>Cargando estadísticas de administrador...</p>
+          <p>Cargando estadísticas globales...</p>
         </div>
       ) : (
         stats && (
-          /* Grid Contenedor de las Tarjetas de Métricas en Matriz 2x2 */
+          /* Matriz 2x2 de Indicadores del Administrador */
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)', // Fuerza la matriz 2x2
+            gridTemplateColumns: 'repeat(2, 1fr)',
             gap: 30, 
             width: '100%',
-            maxWidth: '900px', // Limita el ancho para mantenerlo compacto y centrado
+            maxWidth: '900px',
             marginBottom: 32
           }}>
               
-            {/* Tarjeta 1: Total de Oportunidades */}
-            <div className="form-card" style={{ padding: '30px 24px', position: 'relative', overflow: 'hidden', minHeight: '160px' }}>
+            {/* Tarjeta 1: Usuarios Activos */}
+            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #3b82f6', position: 'relative', overflow: 'hidden', minHeight: '160px' }}>
               <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold', letterSpacing: '0.05em' }}>
+                Usuarios Activos
+              </p>
+              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#3b82f6' }}>
+                {stats.usuariosActivos}
+              </h2>
+              <div style={backgroundIconStyle}>👥</div>
+            </div>
+
+            {/* Tarjeta 2: Clientes Activos */}
+            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #10b981', position: 'relative', minHeight: '160px' }}>
+              <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold' }}>
+                Clientes Activos
+              </p>
+              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#10b981' }}>
+                {stats.clientesActivos}
+              </h2>
+              <div style={backgroundIconStyle}>🏢</div>
+            </div>
+
+            {/* Tarjeta 3: Total Oportunidades */}
+            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #8b5cf6', position: 'relative', minHeight: '160px' }}>
+              <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold' }}>
                 Total Oportunidades
               </p>
-              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: 'var(--text-main)' }}>
+              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#8b5cf6' }}>
                 {stats.totalOportunidades}
               </h2>
               <div style={backgroundIconStyle}>💼</div>
             </div>
 
-            {/* Tarjeta 2: Oportunidades Pendientes */}
-            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #f59e0b', position: 'relative', minHeight: '160px' }}>
+            {/* Tarjeta 4: Número de Áreas */}
+            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #ec4899', position: 'relative', minHeight: '160px' }}>
               <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold' }}>
-                Pendientes
+                Número de Áreas
               </p>
-              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#f59e0b' }}>
-                {stats.oportunidadesPendientes}
+              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#ec4899' }}>
+                {stats.numeroAreas}
               </h2>
-              <div style={backgroundIconStyle}>⏳</div>
-            </div>
-
-            {/* Tarjeta 3: Oportunidades Aprobadas */}
-            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #10b981', position: 'relative', minHeight: '160px' }}>
-              <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold' }}>
-                Aprobadas
-              </p>
-              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#10b981' }}>
-                {stats.oportunidadesAprobadas}
-              </h2>
-              <div style={backgroundIconStyle}>✅</div>
-            </div>
-
-            {/* Tarjeta 4: Oportunidades Rechazadas */}
-            <div className="form-card" style={{ padding: '30px 24px', borderLeft: '4px solid #ef4444', position: 'relative', minHeight: '160px' }}>
-              <p style={{ fontSize: 14, opacity: 0.6, textTransform: 'uppercase', fontWeight: 'bold' }}>
-                Rechazadas
-              </p>
-              <h2 style={{ fontSize: 48, margin: '12px 0 0 0', fontWeight: 'bold', color: '#ef4444' }}>
-                {stats.oportunidadesRechazadas}
-              </h2>
-              <div style={backgroundIconStyle}>❌</div>
+              <div style={backgroundIconStyle}>🧩</div>
             </div>
 
           </div>

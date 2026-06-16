@@ -1,33 +1,40 @@
-// Importa tu configuración de Axios si es necesario cuando conectes la API
-// import api from './api';
+import api from './api'; 
 
-// 1. Definimos la interfaz con las métricas solicitadas
-export interface DashboardStats {
+// Interfaces
+export interface AdminDashboardStats {
+    usuariosActivos: number;
+    clientesActivos: number;
     totalOportunidades: number;
-    oportunidadesPendientes: number;
-    oportunidadesAprobadas: number;
-    oportunidadesRechazadas: number;
+    numeroAreas: number;
 }
 
-// 2. Función para obtener las estadísticas
-export const obtenerEstadisticasDashboard = async (): Promise<DashboardStats> => {
-    /* ======================================================================
-    CONEXIÓN REAL A LA API (Descomentar cuando el backend esté listo)
-    ======================================================================
-    const response = await api.get<DashboardStats>('/dashboard/stats');
-    return response.data;
-    */
+// NUEVO: Interfaces alineadas con las fases de la base de datos
+export interface JefeDashboardStats {
+    prospeccion: number;
+    propuesta: number;
+    negociacion: number;
+    ganadas: number;
+}
 
-    // VALORES QUEMADOS (MOCK DATA)
-    // Simulamos un retraso de red de 500ms usando una Promesa
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                totalOportunidades: 20,
-                oportunidadesPendientes: 15,
-                oportunidadesAprobadas: 25,
-                oportunidadesRechazadas: 8
-            });
-        }, 500);
-    });
+export interface ResponsableDashboardStats {
+    prospeccion: number;
+    propuesta: number;
+    negociacion: number;
+    ganadas: number;
+}
+
+// Métodos del servicio
+export const obtenerEstadisticasAdmin = async (): Promise<AdminDashboardStats> => {
+    const response = await api.get<AdminDashboardStats>('/dashboard/admin');
+    return response.data;
+};
+
+export const obtenerEstadisticasJefe = async (): Promise<JefeDashboardStats> => {
+    const response = await api.get<JefeDashboardStats>('/dashboard/jefe');
+    return response.data;
+};
+
+export const obtenerEstadisticasResponsable = async (): Promise<ResponsableDashboardStats> => {
+    const response = await api.get<ResponsableDashboardStats>('/dashboard/responsable');
+    return response.data;
 };
