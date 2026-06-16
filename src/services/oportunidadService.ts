@@ -48,3 +48,22 @@ export const crearOportunidad = async (oportunidad: NuevaOportunidadDTO): Promis
     const response = await api.post<OportunidadListItem>('/oportunidades', oportunidad);
     return response.data;
 };
+
+export interface Comentario {
+    comentario_id: string;
+    contenido: string;
+    fecha_creacion: string;
+    usuario_id: string;
+    usuario_nombre: string;
+    usuario_rol: string;
+}
+
+export const obtenerComentarios = async (oportunidadId: string | number) => {
+    const response = await api.get(`/oportunidades/${oportunidadId}/comentarios`);
+    return response.data.comentarios;
+};
+
+export const crearComentario = async (oportunidadId: string | number, contenido: string) => {
+    const response = await api.post(`/oportunidades/${oportunidadId}/comentarios`, { contenido });
+    return response.data;
+};
