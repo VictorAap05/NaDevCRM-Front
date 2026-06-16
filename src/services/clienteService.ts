@@ -27,13 +27,10 @@ export const crearCliente = async (cliente: NuevoClienteDTO): Promise<Cliente> =
     return response.data;
 };
 
-// HU04 - CA04.1, CA04.3, CA04.4
 export const actualizarCliente = async (id: string, cliente: NuevoClienteDTO): Promise<Cliente> => {
     const response = await api.put<Cliente>(`/clientes/${id}`, cliente);
     return response.data;
 };
-
-// HU04 - CA04.5, CA04.6, CA04.7
 export interface RespuestaEliminarCliente {
     mensaje?: string;
     eliminado?: { id: string; cliente: string };
