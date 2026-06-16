@@ -6,6 +6,7 @@ export interface Cliente {
     tipo: string;
     tipo_identificacion: string;
     identificacion: string;
+    estado_activo: boolean;
     creado_por?: string;
     fecha_creacion?: string;
 }
@@ -17,8 +18,10 @@ export interface NuevoClienteDTO {
     identificacion: string;
 }
 
-export const obtenerClientes = async (): Promise<Cliente[]> => {
-    const response = await api.get<Cliente[]>('/clientes');
+export type FiltroEstado = 'activo' | 'inactivo' | 'todos';
+
+export const obtenerClientes = async (estado: FiltroEstado = 'todos'): Promise<Cliente[]> => {
+    const response = await api.get<Cliente[]>('/clientes', { params: { estado } });
     return response.data;
 };
 
@@ -31,16 +34,13 @@ export const actualizarCliente = async (id: string, cliente: NuevoClienteDTO): P
     const response = await api.put<Cliente>(`/clientes/${id}`, cliente);
     return response.data;
 };
-export interface RespuestaEliminarCliente {
-    mensaje?: string;
-    eliminado?: { id: string; cliente: string };
-    error?: string;
-    sugerencia?: string;
-    tieneRegistrosAsociados?: boolean;
-    totalOportunidades?: number;
-}
 
-export const eliminarCliente = async (id: string): Promise<RespuestaEliminarCliente> => {
-    const response = await api.delete<RespuestaEliminarCliente>(`/clientes/${id}`);
+export const desactivarCliente = async (id: string): Promise<{ mensaje: string; cliente: Cliente }> => {
+    const response = await api.delete(`/clientes/${id}`);
+    return response.data;
+};
+
+export const reactivarCliente = async (id: string): Promise<{ mensaje: string; cliente: Cliente }> => {
+    const response = await api.patch(`/clientes/${id}/reactivar`);
     return response.data;
 };
