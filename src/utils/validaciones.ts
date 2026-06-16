@@ -24,12 +24,10 @@ export const validarRUC = (ruc: string): boolean => {
     const establecimiento = ruc.substring(10, 13);
     if (establecimiento === '000') return false;
 
-    // ── Persona natural (tercer dígito 0-5): misma lógica que cédula ──
     if (tercerDigito < 6) {
         return validarCedulaEcuatoriana(ruc.substring(0, 10));
     }
 
-    // ── Persona jurídica privada (tercer dígito = 9) ──
     if (tercerDigito === 9) {
         const coeficientes = [4, 3, 2, 7, 6, 5, 4, 3, 2];
         let suma = 0;
@@ -41,7 +39,6 @@ export const validarRUC = (ruc: string): boolean => {
         return digitoVerificador === parseInt(ruc[9]);
     }
 
-    // ── Entidad pública (tercer dígito = 6) ──
     if (tercerDigito === 6) {
         const coeficientes = [3, 2, 7, 6, 5, 4, 3, 2];
         let suma = 0;

@@ -14,7 +14,6 @@ import {
     validarNombreYApellido
 } from '../utils/validaciones';
 
-/* ─── Iconos ─────────────────────────────────────────────── */
 const IconEye = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
 );
@@ -106,7 +105,7 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
                 <form onSubmit={handleSubmit}>
                     <div style={styles.formGrid}>
                         <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                            <label className="field-label">Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <label className="field-label"> Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
                             <input className="field-input" style={errores.nombre ? fieldErrorStyle : undefined} type="text" value={form.nombre} onChange={set('nombre')} />
                             {errores.nombre && <span style={styles.fieldError}>{errores.nombre}</span>}
                         </div>
