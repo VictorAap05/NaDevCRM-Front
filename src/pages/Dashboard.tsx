@@ -12,16 +12,16 @@ const Dashboard = () => {
 
   if (!user) return null;
 
-  // Lógica de renderizado condicional basada en el rol de la tabla 'usuarios'
+  
   const renderContentByRol = () => {
-    // Usamos toUpperCase() para evitar errores por mayúsculas/minúsculas en la DB
+    
     const rolActual = user.rol?.toUpperCase();
 
     switch (rolActual) {
       case 'ADMINISTRADOR':
         return <DashboardAdmin user={user} />;
       
-      case 'JEFE DE ÁREA':
+      case 'JEFE DE AREA':
         return <DashboardJefeArea user={user} />;
       
       case 'RESPONSABLE':
