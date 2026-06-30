@@ -660,7 +660,9 @@ const Oportunidades: React.FC = () => {
   const [editingOportunidad, setEditingOportunidad] = useState<OportunidadListItem | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  // ESTADO  PARA LA TARJETA EXPANDIDA
+  // --- NUEVOS ESTADOS PARA FILTROS (HU13) ---
+  const [filtroCliente, setFiltroCliente] = useState("");
+  const [filtroFase, setFiltroFase] = useState("");
 
   const [form, setForm] = useState({
     cliente_id: "",
@@ -871,6 +873,17 @@ const Oportunidades: React.FC = () => {
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
+  // --- LÓGICA DE FILTRADO (CA13.1 y CA13.2) ---
+  const oportunidadesFiltradas = oportunidades.filter((op) => {
+    // 1. Obtener el nombre del cliente para buscar coincidencias
+    const clienteAsociado = clientes.find((c) => c.id === op.cliente_id);
+    const nombreCliente = clienteAsociado ? clienteAsociado.cliente.toLowerCase() : "";
+
+    const cumpleCliente = filtroCliente === "" || nombreCliente.includes(filtroCliente.toLowerCase());
+    const cumpleFase = filtroFase === "" || op.fase_venta === filtroFase;
+
+    return cumpleCliente && cumpleFase;
+  });
 
   if (!user) return null;
 
@@ -1205,6 +1218,55 @@ const Oportunidades: React.FC = () => {
           </div>
         )}
 
+        {/* BARRA DE BÚSQUEDA Y FILTROS */}
+        <div style={{ 
+            display: 'flex', 
+            gap: 16, 
+            marginBottom: 20, 
+            alignItems: 'flex-end', 
+            flexWrap: 'wrap', 
+            background: 'rgba(255,255,255,0.02)', 
+            padding: '16px 20px', 
+            borderRadius: 12, 
+            border: '1px solid rgba(255,255,255,0.05)' 
+        }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="field-label">Buscar por Cliente</label>
+                <input
+                    className="field-input"
+                    type="text"
+                    placeholder="Escriba el nombre del cliente..."
+                    value={filtroCliente}
+                    onChange={(e) => setFiltroCliente(e.target.value)}
+                />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="field-label">Filtrar por Estado</label>
+                <select
+                    className="field-select"
+                    value={filtroFase}
+                    onChange={(e) => setFiltroFase(e.target.value)}
+                >
+                    <option value="">Todos los estados</option>
+                    <option value="Prospección">Prospección</option>
+                    <option value="Propuesta">Propuesta</option>
+                    <option value="Negociación">Negociación</option>
+                    <option value="Cerrada Ganada">Cerrada Ganada</option>
+                </select>
+            </div>
+            {/* CA13.4: Botón de Limpiar Filtros */}
+            <button
+                className="btn-secondary"
+                onClick={() => {
+                    setFiltroCliente('');
+                    setFiltroFase('');
+                }}
+                style={{ height: '42px', padding: '0 20px' }}
+            >
+                Limpiar Filtros
+            </button>
+        </div>
+
         <div className="form-card">
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {isLoadingData ? (
@@ -1232,8 +1294,13 @@ const Oportunidades: React.FC = () => {
               <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
                 No hay oportunidades registradas aún.
               </p>
+            ) : oportunidadesFiltradas.length === 0 ? (
+              /* CA13.3: Mensaje dinámico si no hay coincidencias de búsqueda */
+              <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
+                No se encontraron oportunidades con los criterios seleccionados.
+              </p>
             ) : (
-              oportunidades.map((op) => {
+              oportunidadesFiltradas.map((op) => {
                 const cliente = clientes.find((c) => c.id === op.cliente_id);
                 const area = areas.find((a) => a.id === op.area_id);
                 const respComercial = usuarios.find(
