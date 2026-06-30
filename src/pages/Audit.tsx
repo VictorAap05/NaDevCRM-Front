@@ -7,8 +7,10 @@ import type { Usuario } from '../types/auth';
 const Audit = () => {
     const navigate = useNavigate();
     
-    const userString = localStorage.getItem('user');
-    const user: Usuario | null = userString ? JSON.parse(userString) : null;
+    const [user] = useState<Usuario | null>(() => {
+        const userString = localStorage.getItem('user');
+        return userString ? JSON.parse(userString) : null;
+    });
 
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,7 +35,17 @@ const Audit = () => {
         };
 
         cargarDatos();
-    }, [navigate, user]);
+
+        // Configurar el intervalo de actualización cada 10 segundos
+        const intervalo = setInterval(() => {
+            cargarDatos();
+        }, 10000);
+
+        // Limpiar el intervalo al salir de la pantalla para no consumir memoria
+        return () => clearInterval(intervalo);
+
+    // Depender de propiedades primitivas (id, rol)
+    }, [navigate, user?.id, user?.rol]);
 
     const formatearFecha = (fechaIso: string) => {
         const fecha = new Date(fechaIso);
@@ -45,7 +57,6 @@ const Audit = () => {
             minute: '2-digit'
         });
     };
-
 
     if (!user) return null; 
 
@@ -67,47 +78,47 @@ const Audit = () => {
             );
         }
 
-    // DELETE
-    if (oldData && !newData) {
+        // DELETE
+        if (oldData && !newData) {
+            return (
+                <ul style={{ margin: 0, padding: 0, listStyleType: 'none', opacity: 0.7 }}>
+                    {Object.entries(oldData).map(([key, val]) => (
+                        <li key={key}>
+                            <strong>{key}:</strong> {String(val)}
+                        </li>
+                    ))}
+                </ul>
+            );
+        }
+
+        if (!oldData || !newData) {
+            return <span style={{ opacity: 0.5 }}>Cambios en campos técnicos menores</span>;
+        }
+        
+        const diferencias: Array<{ campo: string; antes: unknown; ahora: unknown }> = [];
+
+        Object.keys(newData).forEach((key) => {
+            if (String(oldData[key]) !== String(newData[key])) {
+                diferencias.push({ campo: key, antes: oldData[key], ahora: newData[key] });
+            }
+        });
+
+        if (diferencias.length === 0) return <span style={{ opacity: 0.5 }}>Sin cambios visibles</span>;
+
         return (
-            <ul style={{ margin: 0, padding: 0, listStyleType: 'none', opacity: 0.7 }}>
-                {Object.entries(oldData).map(([key, val]) => (
-                    <li key={key}>
-                        <strong>{key}:</strong> {String(val)}
+            <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
+                {diferencias.map((diff) => (
+                    <li key={diff.campo}>
+                        <strong style={{ textTransform: 'capitalize' }}>{diff.campo}:</strong>{' '}
+                        <span style={{ color: '#ff4444', textDecoration: 'line-through', marginRight: 6 }}>
+                            {String(diff.antes)}
+                        </span>
+                        <span style={{ color: '#00c851' }}>➔ {String(diff.ahora)}</span>
                     </li>
                 ))}
             </ul>
         );
-    }
-
-    if (!oldData || !newData) {
-        return <span style={{ opacity: 0.5 }}>Cambios en campos técnicos menores</span>;
-    }
-    
-    const diferencias: Array<{ campo: string; antes: unknown; ahora: unknown }> = [];
-
-    Object.keys(newData).forEach((key) => {
-        if (String(oldData[key]) !== String(newData[key])) {
-            diferencias.push({ campo: key, antes: oldData[key], ahora: newData[key] });
-        }
-    });
-
-    if (diferencias.length === 0) return <span style={{ opacity: 0.5 }}>Sin cambios visibles</span>;
-
-    return (
-        <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
-            {diferencias.map((diff) => (
-                <li key={diff.campo}>
-                    <strong style={{ textTransform: 'capitalize' }}>{diff.campo}:</strong>{' '}
-                    <span style={{ color: '#ff4444', textDecoration: 'line-through', marginRight: 6 }}>
-                        {String(diff.antes)}
-                    </span>
-                    <span style={{ color: '#00c851' }}>➔ {String(diff.ahora)}</span>
-                </li>
-            ))}
-        </ul>
-    );
-};
+    };
 
     return (
         <div className="dash-root"> 
@@ -122,7 +133,7 @@ const Audit = () => {
                     <p style={{ opacity: 0.7, marginTop: 10 }}>Historial de acciones realizadas por los usuarios en el sistema.</p>
                 </div>
 
-                {loading && <div>Cargando historial del sistema...</div>}
+                {loading && logs.length === 0 && <div>Cargando historial del sistema...</div>}
                 
                 {error && (
                     <div className="error-box" style={{ 
@@ -137,7 +148,7 @@ const Audit = () => {
                     </div>
                 )}
 
-                {!loading && !error && (
+                {!error && (
                     <div className="form-card" style={{ padding: 0, overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
@@ -150,7 +161,7 @@ const Audit = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {logs.length === 0 ? (
+                                {logs.length === 0 && !loading ? (
                                     <tr>
                                         <td colSpan={5} style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>
                                             No hay registros de auditoría aún.
@@ -187,7 +198,6 @@ const Audit = () => {
                                                     borderRadius: '8px',
                                                     border: '1px solid rgba(255,255,255,0.03)'
                                                 }}>
-                                                    {/* Invocamos de forma limpia la función de diferencias */}
                                                     {obtenerDiferencias(log.old_data, log.new_data)}
                                                 </div>
                                             </td>

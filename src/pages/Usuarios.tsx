@@ -36,7 +36,7 @@ const ActivateIcon = () => (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
 );
 
-/* ─── Styles Modales ─────────────────────────────────────── */
+/* ─── Styles Modales */
 const styles = {
     overlay: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 24, animation: 'fadeIn 0.18s ease' },
     modal: { width: '100%', maxWidth: 560, background: '#111318', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '36px 40px', animation: 'slideUp 0.22s ease', maxHeight: '90vh', overflowY: 'auto' as const },
@@ -52,7 +52,7 @@ const styles = {
 
 const fieldErrorStyle: React.CSSProperties = { borderColor: 'rgba(255,80,80,0.5)', background: 'rgba(255,80,80,0.05)' };
 
-/* ─── Modal de Edición ───────────────────────────────────── */
+/* ─── Modal de Edición  */
 interface EditModalProps { usuario: UserListItem; onClose: () => void; onSaved: (u: UserListItem) => void; }
 
 const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
@@ -155,7 +155,7 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
     );
 };
 
-/* ─── Modal de Cambio de Estado (Activar/Desactivar) ─────── */
+/* ─── Cambio de Estado (Activar/Desactivar) ─────── */
 interface ToggleModalProps { usuario: UserListItem; onClose: () => void; onToggled: (id: string, nuevoEstado: boolean) => void; }
 
 const ToggleStatusModal: React.FC<ToggleModalProps> = ({ usuario, onClose, onToggled }) => {
@@ -215,7 +215,7 @@ const ToggleStatusModal: React.FC<ToggleModalProps> = ({ usuario, onClose, onTog
     );
 };
 
-/* ─── Componente Principal ───────────────────────────────── */
+/* ─── Componente Principal */
 const Usuarios = () => {
     const [user] = useState<Usuario | null>(() => {
         const s = localStorage.getItem('user');
