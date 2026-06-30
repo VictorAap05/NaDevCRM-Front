@@ -3,7 +3,7 @@ export interface Usuario {
   nombre: string;
   email: string;
   // Mantenemos el arreglo del rol que sí necesitábamos
-  rol: 'Administrador' | 'Vendedor' | 'Gerente' | 'Jefe de Área' | 'Jefe de Area'; 
+  rol: 'Administrador' | 'Vendedor' | 'Gerente' | 'Responsable' | 'Jefe de Area'; 
   areas?: string;
   estado_activo?: boolean;
 }
