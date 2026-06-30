@@ -1,12 +1,24 @@
 import api from './api'; 
 
-// Interfaces
+// NUEVO: Interfaz para los registros de auditoría
+export interface AuditoriaLog {
+    id: number;
+    action: string;
+    table_name: string;
+    created_at: string;
+    usuario_nombre: string | null;
+}
+
+// Actualizamos la interfaz del Admin
 export interface AdminDashboardStats {
     usuariosActivos: number;
     clientesActivos: number;
     totalOportunidades: number;
     numeroAreas: number;
+    ultimosCambios: AuditoriaLog[]; // Añadimos el array de auditoría
 }
+
+// ... (El resto del archivo queda exactamente igual con Jefe y Responsable) ...
 
 // NUEVO: Interfaces alineadas con las fases de la base de datos
 export interface JefeDashboardStats {
