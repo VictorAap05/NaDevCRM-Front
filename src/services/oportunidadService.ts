@@ -19,6 +19,7 @@ export interface OportunidadListItem {
     creado_por?: string;
     estado_activo: boolean;
     fecha_creacion?: string;
+    puede_editar?: boolean;
 }
 
 export interface NuevaOportunidadDTO {
@@ -39,13 +40,25 @@ export interface NuevaOportunidadDTO {
     creado_por?: string;
 }
 
+export type ActualizarOportunidadDTO = Omit<NuevaOportunidadDTO, 'creado_por'>;
+
 export const obtenerOportunidades = async (): Promise<OportunidadListItem[]> => {
     const response = await api.get<OportunidadListItem[]>('/oportunidades');
     return response.data;
 };
 
+export const obtenerOportunidadPorId = async (id: string): Promise<OportunidadListItem> => {
+    const response = await api.get<OportunidadListItem>(`/oportunidades/${id}`);
+    return response.data;
+};
+
 export const crearOportunidad = async (oportunidad: NuevaOportunidadDTO): Promise<OportunidadListItem> => {
     const response = await api.post<OportunidadListItem>('/oportunidades', oportunidad);
+    return response.data;
+};
+
+export const actualizarOportunidad = async (id: string, oportunidad: ActualizarOportunidadDTO): Promise<OportunidadListItem> => {
+    const response = await api.put<OportunidadListItem>(`/oportunidades/${id}`, oportunidad);
     return response.data;
 };
 

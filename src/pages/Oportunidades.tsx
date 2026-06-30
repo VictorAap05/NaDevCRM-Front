@@ -7,8 +7,10 @@ import IconSend from "../components/icons/IconSend";
 import {
   obtenerOportunidades,
   crearOportunidad,
+  actualizarOportunidad,
   type OportunidadListItem,
   type NuevaOportunidadDTO,
+  type ActualizarOportunidadDTO,
   obtenerComentarios,
   crearComentario,
   type Comentario,
@@ -200,6 +202,444 @@ const SeccionComentarios: React.FC<{ oportunidadId: string | number }> = ({
   );
 };
 
+// ─── Modal de Edición de Oportunidad ───
+interface EditOportunidadModalProps {
+  oportunidad: OportunidadListItem;
+  clientes: Cliente[];
+  usuarios: UserListItem[];
+  areas: Area[];
+  onClose: () => void;
+  onSaved: (op: OportunidadListItem) => void;
+}
+
+const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
+  oportunidad,
+  clientes,
+  usuarios,
+  areas,
+  onClose,
+  onSaved,
+}) => {
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/\D/g, "");
+    if (!numericValue) return "";
+    const number = parseFloat(numericValue) / 100;
+    return number.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const [form, setForm] = useState({
+    cliente_id: oportunidad.cliente_id || "",
+    nombre_contacto: oportunidad.nombre_contacto || "",
+    correo_contacto: oportunidad.correo_contacto || "",
+    numero_contacto: oportunidad.numero_contacto || "",
+    area_id: oportunidad.area_id || "",
+    nombre_oportunidad: oportunidad.nombre_oportunidad || "",
+    codigo_oportunidad: oportunidad.codigo_oportunidad || "",
+    fase_venta: oportunidad.fase_venta || "Prospección",
+    monto_estimado: oportunidad.monto_estimado
+      ? Number(oportunidad.monto_estimado).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : "",
+    probabilidad_venta: oportunidad.probabilidad_venta || "Media",
+    fecha_cierre_esperada: oportunidad.fecha_cierre_esperada
+      ? oportunidad.fecha_cierre_esperada.split("T")[0]
+      : "",
+    resp_comercial_id: oportunidad.resp_comercial_id || "",
+    resp_tecnico_id: oportunidad.resp_tecnico_id || "",
+    descripcion: oportunidad.descripcion || "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleChange =
+    (k: keyof typeof form) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >,
+    ) => {
+      let value = e.target.value;
+
+      if (k === "numero_contacto") {
+        value = value.replace(/\D/g, "").slice(0, 10);
+      }
+      if (k === "nombre_contacto") {
+        value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
+      }
+      if (k === "monto_estimado") {
+        value = formatCurrency(value);
+      }
+      if (k === "codigo_oportunidad") {
+        value = value.replace(/[^A-Za-z0-9-]/g, "");
+      }
+
+      setForm((f) => ({ ...f, [k]: value }));
+    };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (form.nombre_contacto && !validarNombreYApellido(form.nombre_contacto)) {
+      setError("Por favor, ingresa al menos un nombre y un apellido válidos.");
+      return;
+    }
+    if (form.correo_contacto && !validarEmail(form.correo_contacto)) {
+      setError("Por favor, ingresa un correo electrónico válido.");
+      return;
+    }
+    if (form.numero_contacto && !validarTelefonoEcuador(form.numero_contacto)) {
+      setError('El número de contacto debe tener 10 dígitos y empezar con "09".');
+      return;
+    }
+
+    const montoParseado = parseFloat(form.monto_estimado.replace(/,/g, "")) || 0;
+    if (montoParseado <= 0) {
+      setError("El monto estimado debe ser mayor a $0.00.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload: ActualizarOportunidadDTO = {
+        ...form,
+        monto_estimado: montoParseado,
+        codigo_oportunidad: form.codigo_oportunidad || undefined,
+        nombre_contacto: form.nombre_contacto || undefined,
+        correo_contacto: form.correo_contacto || undefined,
+        numero_contacto: form.numero_contacto || undefined,
+        resp_comercial_id: form.resp_comercial_id || undefined,
+        resp_tecnico_id: form.resp_tecnico_id || undefined,
+        descripcion: form.descripcion || undefined,
+      };
+
+      const actualizada = await actualizarOportunidad(oportunidad.id, payload);
+      onSaved(actualizada);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.error ||
+            err.message ||
+            "Error al actualizar la oportunidad",
+        );
+      } else {
+        setError("Error desconocido al actualizar la oportunidad");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 200,
+        padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 720,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          background: "#111318",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 20,
+          padding: "32px 36px",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: 24,
+          }}
+        >
+          <div>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "#4e9eff",
+                marginBottom: 6,
+              }}
+            >
+              Gestión Comercial
+            </p>
+            <h2
+              style={{
+                fontFamily: "DM Serif Display, serif",
+                fontSize: 24,
+                color: "#f0f4ff",
+                margin: 0,
+              }}
+            >
+              Editar Oportunidad
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.5)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {error && (
+          <div className="error-box" style={{ marginBottom: 20 }}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <h3 style={{ fontSize: 14, color: "var(--accent)", marginBottom: 15 }}>
+            Datos del Cliente
+          </h3>
+
+          <div className="form-grid">
+            <div className="form-group full">
+              <label className="field-label">Cliente Asociado *</label>
+              <select
+                className="field-select"
+                value={form.cliente_id}
+                onChange={handleChange("cliente_id")}
+                required
+              >
+                <option value="">Seleccione un cliente...</option>
+                {clientes.map((c) => (
+                  <option key={c.id} value={c.id}>{c.cliente}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Nombre del Contacto</label>
+              <input
+                className="field-input"
+                type="text"
+                value={form.nombre_contacto}
+                onChange={handleChange("nombre_contacto")}
+                placeholder="Ej: Juan Pérez"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Correo del Contacto</label>
+              <input
+                className="field-input"
+                type="email"
+                value={form.correo_contacto}
+                onChange={handleChange("correo_contacto")}
+                placeholder="juan@empresa.com"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Teléfono del Contacto</label>
+              <input
+                className="field-input"
+                type="tel"
+                value={form.numero_contacto}
+                onChange={handleChange("numero_contacto")}
+                placeholder="0999999999"
+                maxLength={10}
+              />
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: 14, color: "var(--accent)", marginTop: 28, marginBottom: 15 }}>
+            Datos de la Oportunidad
+          </h3>
+
+          <div className="form-grid">
+            <div className="form-group full">
+              <label className="field-label">Nombre de la Oportunidad *</label>
+              <input
+                className="field-input"
+                type="text"
+                value={form.nombre_oportunidad}
+                onChange={handleChange("nombre_oportunidad")}
+                required
+                minLength={5}
+                maxLength={150}
+                placeholder="Ej: Implementación de ERP"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Área *</label>
+              <select
+                className="field-select"
+                value={form.area_id}
+                onChange={handleChange("area_id")}
+                required
+              >
+                <option value="">Seleccione el área...</option>
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>{a.area}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Código (Opcional)</label>
+              <input
+                className="field-input"
+                type="text"
+                value={form.codigo_oportunidad}
+                onChange={handleChange("codigo_oportunidad")}
+                placeholder="Ej: OP-2026-001"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Monto Estimado ($) *</label>
+              <input
+                className="field-input"
+                type="text"
+                inputMode="decimal"
+                value={form.monto_estimado}
+                onChange={handleChange("monto_estimado")}
+                required
+                placeholder="$0.00"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Fase de Venta</label>
+              <select
+                className="field-select"
+                value={form.fase_venta}
+                onChange={handleChange("fase_venta")}
+              >
+                <option value="Prospección">Prospección</option>
+                <option value="Propuesta">Propuesta</option>
+                <option value="Negociación">Negociación</option>
+                <option value="Cerrada Ganada">Cerrada Ganada</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Probabilidad</label>
+              <select
+                className="field-select"
+                value={form.probabilidad_venta}
+                onChange={handleChange("probabilidad_venta")}
+              >
+                <option value="Alta">Alta</option>
+                <option value="Media">Media</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Fecha de Cierre Esperada *</label>
+              <input
+                className="field-input"
+                type="date"
+                value={form.fecha_cierre_esperada}
+                onChange={handleChange("fecha_cierre_esperada")}
+                required
+              />
+            </div>
+          </div>
+
+          <h3 style={{ fontSize: 14, color: "var(--accent)", marginTop: 28, marginBottom: 15 }}>
+            Equipo Asignado
+          </h3>
+
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="field-label">Responsable Comercial</label>
+              <select
+                className="field-select"
+                value={form.resp_comercial_id}
+                onChange={handleChange("resp_comercial_id")}
+              >
+                <option value="">Sin asignar...</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="field-label">Responsable Técnico</label>
+              <select
+                className="field-select"
+                value={form.resp_tecnico_id}
+                onChange={handleChange("resp_tecnico_id")}
+              >
+                <option value="">Sin asignar...</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group full">
+              <label className="field-label">Descripción Detallada</label>
+              <textarea
+                className="field-input"
+                style={{ minHeight: "80px", resize: "vertical" }}
+                value={form.descripcion}
+                onChange={handleChange("descripcion")}
+                maxLength={1000}
+              />
+            </div>
+          </div>
+
+          <div
+            className="form-footer"
+            style={{ marginTop: 24, display: "flex", justifyContent: "flex-end", gap: 12 }}
+          >
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? <span className="spinner" /> : <IconSend />}
+              {loading ? " Guardando..." : " Guardar Cambios"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const Oportunidades: React.FC = () => {
   const [user] = useState<Usuario | null>(() => {
     const userString = localStorage.getItem("user");
@@ -217,6 +657,7 @@ const Oportunidades: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | number | null>(null);
+  const [editingOportunidad, setEditingOportunidad] = useState<OportunidadListItem | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
 
   // --- NUEVOS ESTADOS PARA FILTROS (HU13) ---
@@ -424,6 +865,14 @@ const Oportunidades: React.FC = () => {
     }
   };
 
+  const handleOportunidadActualizada = (actualizada: OportunidadListItem) => {
+    setOportunidades((prev) =>
+      prev.map((op) => (op.id === actualizada.id ? actualizada : op)),
+    );
+    setEditingOportunidad(null);
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+  };
   // --- LÓGICA DE FILTRADO (CA13.1 y CA13.2) ---
   const oportunidadesFiltradas = oportunidades.filter((op) => {
     // 1. Obtener el nombre del cliente para buscar coincidencias
@@ -943,6 +1392,45 @@ const Oportunidades: React.FC = () => {
                           {op.fase_venta}
                         </span>
 
+                        {op.puede_editar && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingOportunidad(op);
+                            }}
+                            title="Editar oportunidad"
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              background: "rgba(255,255,255,0.04)",
+                              color: "rgba(255,255,255,0.5)",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              transition: "background 0.18s, color 0.18s, border-color 0.18s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = "rgba(78,158,255,0.12)";
+                              e.currentTarget.style.color = "#89c2ff";
+                              e.currentTarget.style.borderColor = "rgba(78,158,255,0.3)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                              e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+                              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                        )}
+
                         <span
                           style={{
                             fontSize: 18,
@@ -1060,6 +1548,17 @@ const Oportunidades: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {editingOportunidad && (
+        <EditOportunidadModal
+          oportunidad={editingOportunidad}
+          clientes={clientes}
+          usuarios={usuarios}
+          areas={areas}
+          onClose={() => setEditingOportunidad(null)}
+          onSaved={handleOportunidadActualizada}
+        />
+      )}
     </div>
   );
 };
