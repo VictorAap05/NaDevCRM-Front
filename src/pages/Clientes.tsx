@@ -48,6 +48,13 @@ const validarForm = (form: FormData): Record<string, string> => {
     return errores;
 };
 
+/* ─── Configuración de campo de identificación según tipo ─── */
+const obtenerConfigIdentificacion = (tipo: string): { maxLen: number; placeholder: string } => {
+    if (tipo === 'Cédula') return { maxLen: 10, placeholder: '10 dígitos' };
+    if (tipo === 'RUC') return { maxLen: 13, placeholder: '13 dígitos' };
+    return { maxLen: 20, placeholder: 'Mínimo 5 caracteres' };
+};
+
 /* ─── Iconos ────────────────────────────────────────────── */
 const ErrorIcon = () => (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
@@ -113,9 +120,25 @@ const ToggleEstadoModal: React.FC<ToggleModalProps> = ({ cliente, onClose, onCon
         }
     };
 
+    let contenidoBotonConfirmar: React.ReactNode;
+    if (loading) {
+        contenidoBotonConfirmar = <><span className="spinner" /> Procesando...</>;
+    } else if (desactivando) {
+        contenidoBotonConfirmar = <><ToggleOffIcon /> Desactivar</>;
+    } else {
+        contenidoBotonConfirmar = <><ToggleOnIcon /> Reactivar</>;
+    }
+
     return (
-        <div style={styles.overlay} onClick={onClose}>
-            <div style={{ ...styles.modal, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+        <div
+            style={styles.overlay}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); }}
+        >
+            <div style={{ ...styles.modal, maxWidth: 440 }}>
                 <div style={{ textAlign: 'center', padding: '4px 0 8px' }}>
                     <div style={{
                         width: 52, height: 52, borderRadius: '50%',
@@ -162,10 +185,7 @@ const ToggleEstadoModal: React.FC<ToggleModalProps> = ({ cliente, onClose, onCon
                             transition: 'opacity 0.2s',
                         }}
                     >
-                        {loading
-                            ? <><span className="spinner" /> Procesando...</>
-                            : desactivando ? <><ToggleOffIcon /> Desactivar</> : <><ToggleOnIcon /> Reactivar</>
-                        }
+                        {contenidoBotonConfirmar}
                     </button>
                 </div>
             </div>
@@ -196,7 +216,7 @@ const EditModal: React.FC<EditModalProps> = ({ cliente, onClose, onSaved }) => {
         if (errores[k]) setErrores(prev => { const n = { ...prev }; delete n[k]; return n; });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setErrorGlobal('');
         const errs = validarForm(form);
@@ -216,12 +236,18 @@ const EditModal: React.FC<EditModalProps> = ({ cliente, onClose, onSaved }) => {
         }
     };
 
-    const maxLen = form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20;
-    const placeholder = form.tipo_identificacion === 'Cédula' ? '10 dígitos' : form.tipo_identificacion === 'RUC' ? '13 dígitos' : 'Mínimo 5 caracteres';
+    const { maxLen, placeholder } = obtenerConfigIdentificacion(form.tipo_identificacion);
 
     return (
-        <div style={styles.overlay} onClick={onClose}>
-            <div style={styles.modal} onClick={e => e.stopPropagation()}>
+        <div
+            style={styles.overlay}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); }}
+        >
+            <div style={styles.modal}>
                 <div style={styles.modalHeader}>
                     <div>
                         <p style={styles.modalEyebrow}>Gestión de Clientes</p>
@@ -241,29 +267,29 @@ const EditModal: React.FC<EditModalProps> = ({ cliente, onClose, onSaved }) => {
                 <form onSubmit={handleSubmit}>
                     <div style={styles.formGrid}>
                         <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                            <label className="field-label">Nombre del Cliente / Razón Social <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.cliente ? fieldErrorStyle : undefined}
+                            <label className="field-label" htmlFor="editar-cliente-nombre">Nombre del Cliente / Razón Social <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-cliente-nombre" className="field-input" style={errores.cliente ? fieldErrorStyle : undefined}
                                 type="text" value={form.cliente} onChange={set('cliente')} placeholder="Ej: Corporación X" />
                             {errores.cliente && <span style={styles.fieldError}>{errores.cliente}</span>}
                         </div>
                         <div style={styles.formGroup}>
-                            <label className="field-label">Tipo de Entidad <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <select className="field-select" value={form.tipo} onChange={set('tipo')}>
+                            <label className="field-label" htmlFor="editar-cliente-tipo">Tipo de Entidad <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <select id="editar-cliente-tipo" className="field-select" value={form.tipo} onChange={set('tipo')}>
                                 <option value="Público">Público</option>
                                 <option value="Privado">Privado</option>
                             </select>
                         </div>
                         <div style={styles.formGroup}>
-                            <label className="field-label">Tipo Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <select className="field-select" value={form.tipo_identificacion} onChange={set('tipo_identificacion')}>
+                            <label className="field-label" htmlFor="editar-cliente-tipo-id">Tipo Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <select id="editar-cliente-tipo-id" className="field-select" value={form.tipo_identificacion} onChange={set('tipo_identificacion')}>
                                 <option value="Cédula">Cédula</option>
                                 <option value="RUC">RUC</option>
                                 <option value="Pasaporte">Pasaporte</option>
                             </select>
                         </div>
                         <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                            <label className="field-label">Número de Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.identificacion ? fieldErrorStyle : undefined}
+                            <label className="field-label" htmlFor="editar-cliente-identificacion">Número de Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-cliente-identificacion" className="field-input" style={errores.identificacion ? fieldErrorStyle : undefined}
                                 type="text" value={form.identificacion} onChange={set('identificacion')}
                                 maxLength={maxLen} placeholder={placeholder} />
                             {errores.identificacion && <span style={styles.fieldError}>{errores.identificacion}</span>}
@@ -316,6 +342,149 @@ const fieldErrorStyle: React.CSSProperties = {
 };
 
 /* ─── Página principal ───────────────────────────────────── */
+const obtenerTextoFiltro = (filtro: FiltroEstado): string => {
+    if (filtro === 'activo') return 'activos';
+    if (filtro === 'inactivo') return 'inactivos';
+    return 'todos';
+};
+
+const obtenerMensajeSinClientes = (filtro: FiltroEstado): string => {
+    if (filtro === 'inactivo') return 'No hay clientes inactivos.';
+    if (filtro === 'activo') return 'No hay clientes activos.';
+    return 'No se encontraron clientes.';
+};
+
+/* ─── Fila de cliente en la lista ────────────────────────── */
+interface ClienteRowProps {
+    cliente: Cliente;
+    clientOps: OportunidadListItem[];
+    isExpanded: boolean;
+    onToggleExpand: () => void;
+    onEditar: () => void;
+    onToggleEstado: () => void;
+    onVerOportunidades: () => void;
+}
+
+const ClienteRow: React.FC<ClienteRowProps> = ({
+    cliente: c,
+    clientOps,
+    isExpanded,
+    onToggleExpand,
+    onEditar,
+    onToggleEstado,
+    onVerOportunidades,
+}) => {
+    const inactivo = !c.estado_activo;
+
+    let cardBackground = 'rgba(255,255,255,0.025)';
+    let cardBorder = '1px solid rgba(255,255,255,0.06)';
+    if (isExpanded) {
+        cardBackground = 'rgba(78,158,255,0.04)';
+        cardBorder = '1px solid rgba(78,158,255,0.2)';
+    } else if (inactivo) {
+        cardBackground = 'rgba(255,255,255,0.015)';
+        cardBorder = '1px solid rgba(255,255,255,0.04)';
+    }
+
+    return (
+        <div style={{
+            padding: '16px 20px', borderRadius: 12,
+            background: cardBackground,
+            border: cardBorder,
+            opacity: inactivo ? 0.65 : 1,
+            transition: 'all 0.2s',
+        }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 500, color: '#e8efff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                            {c.cliente}
+                        </h3>
+                        {inactivo && (
+                            <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 7px', borderRadius: 20, background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.2)', whiteSpace: 'nowrap' }}>
+                                INACTIVO
+                            </span>
+                        )}
+                    </div>
+                    <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
+                        {c.tipo_identificacion}: <span style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{c.identificacion}</span>
+                    </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {/* Badge tipo */}
+                    <span style={{
+                        padding: '3px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 500,
+                        background: c.tipo === 'Público' ? 'rgba(30,58,138,0.5)' : 'rgba(6,78,59,0.5)',
+                        color: c.tipo === 'Público' ? '#93c5fd' : '#6ee7b7',
+                        border: c.tipo === 'Público' ? '1px solid rgba(147,197,253,0.2)' : '1px solid rgba(110,231,183,0.2)',
+                    }}>
+                        {c.tipo}
+                    </span>
+
+                    {/* Toggle oportunidades */}
+                    <button
+                        className={`ops-toggle-btn${isExpanded ? ' open' : ''}`}
+                        onClick={onToggleExpand}
+                    >
+                        Ops ({clientOps.length}) {isExpanded ? '▲' : '▼'}
+                    </button>
+
+                    {/* Editar */}
+                    <button className="row-action-btn edit" title="Editar cliente" onClick={onEditar}>
+                        <EditIcon />
+                    </button>
+
+                    {/* Desactivar / Reactivar */}
+                    <button
+                        className={`row-action-btn ${c.estado_activo ? 'deactivate' : 'activate'}`}
+                        title={c.estado_activo ? 'Desactivar cliente' : 'Reactivar cliente'}
+                        onClick={onToggleEstado}
+                    >
+                        {c.estado_activo ? <ToggleOffIcon /> : <ToggleOnIcon />}
+                    </button>
+                </div>
+            </div>
+
+            {/* Panel oportunidades */}
+            {isExpanded && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <p style={{ fontSize: 11.5, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+                        Oportunidades Comerciales
+                    </p>
+                    {clientOps.length === 0 ? (
+                        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                            No existen oportunidades vinculadas a este cliente.
+                        </p>
+                    ) : (
+                        <>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {clientOps.map(op => (
+                                    <div key={op.id} style={{
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        background: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: 8,
+                                        fontSize: 13, border: '1px solid rgba(255,255,255,0.04)', flexWrap: 'wrap', gap: 8,
+                                    }}>
+                                        <span style={{ fontWeight: 500, color: '#e8efff' }}>{op.nombre_oportunidad}</span>
+                                        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>${op.monto_estimado}</span>
+                                            <span style={{ color: '#4e9eff', fontSize: 12 }}>{op.fase_venta}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={onVerOportunidades}
+                                style={{ marginTop: 10, background: 'transparent', color: '#33b5e5', border: 'none', cursor: 'pointer', fontSize: 12.5, padding: '4px 0', textDecoration: 'underline', fontFamily: 'DM Sans, sans-serif' }}>
+                                Ver todas en el módulo de oportunidades →
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Clientes = () => {
     const navigate = useNavigate();
 
@@ -379,7 +548,7 @@ const Clientes = () => {
         setTimeout(() => setSuccess(''), 3500);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         const errs = validarForm(form);
@@ -426,8 +595,7 @@ const Clientes = () => {
         );
     };
 
-    const maxLen = form.tipo_identificacion === 'Cédula' ? 10 : form.tipo_identificacion === 'RUC' ? 13 : 20;
-    const placeholder = form.tipo_identificacion === 'Cédula' ? '10 dígitos' : form.tipo_identificacion === 'RUC' ? '13 dígitos' : 'Mínimo 5 caracteres';
+    const { maxLen, placeholder } = obtenerConfigIdentificacion(form.tipo_identificacion);
 
     if (!user) return null;
 
@@ -486,7 +654,7 @@ const Clientes = () => {
                         <p className="eyebrow">Directorio de Entidades</p>
                         <h1 className="page-title" style={{ fontSize: 32, marginBottom: 4 }}>Clientes</h1>
                         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
-                            {clientes.length} registro{clientes.length !== 1 ? 's' : ''} · mostrando {filtro === 'activo' ? 'activos' : filtro === 'inactivo' ? 'inactivos' : 'todos'}
+                            {clientes.length} registro{clientes.length !== 1 ? 's' : ''} · mostrando {obtenerTextoFiltro(filtro)}
                         </p>
                     </div>
                     <button
@@ -523,29 +691,29 @@ const Clientes = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="form-grid">
                                 <div className="form-group full">
-                                    <label className="field-label">Nombre del Cliente / Razón Social <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" style={formErrores.cliente ? fieldErrorStyle : undefined}
+                                    <label className="field-label" htmlFor="nuevo-cliente-nombre">Nombre del Cliente / Razón Social <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-cliente-nombre" className="field-input" style={formErrores.cliente ? fieldErrorStyle : undefined}
                                         type="text" value={form.cliente} onChange={handleChange('cliente')} placeholder="Ej: Corporación X" />
                                     {formErrores.cliente && <span style={{ fontSize: 12, color: '#ff9a9a', marginTop: 4 }}>{formErrores.cliente}</span>}
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Tipo de Entidad <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <select className="field-select" value={form.tipo} onChange={handleChange('tipo')}>
+                                    <label className="field-label" htmlFor="nuevo-cliente-tipo">Tipo de Entidad <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <select id="nuevo-cliente-tipo" className="field-select" value={form.tipo} onChange={handleChange('tipo')}>
                                         <option value="Público">Público</option>
                                         <option value="Privado">Privado</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Tipo Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <select className="field-select" value={form.tipo_identificacion} onChange={handleChange('tipo_identificacion')}>
+                                    <label className="field-label" htmlFor="nuevo-cliente-tipo-id">Tipo Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <select id="nuevo-cliente-tipo-id" className="field-select" value={form.tipo_identificacion} onChange={handleChange('tipo_identificacion')}>
                                         <option value="Cédula">Cédula</option>
                                         <option value="RUC">RUC</option>
                                         <option value="Pasaporte">Pasaporte</option>
                                     </select>
                                 </div>
                                 <div className="form-group full">
-                                    <label className="field-label">Número de Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" style={formErrores.identificacion ? fieldErrorStyle : undefined}
+                                    <label className="field-label" htmlFor="nuevo-cliente-identificacion">Número de Identificación <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-cliente-identificacion" className="field-input" style={formErrores.identificacion ? fieldErrorStyle : undefined}
                                         type="text" value={form.identificacion} onChange={handleChange('identificacion')}
                                         maxLength={maxLen} placeholder={placeholder} />
                                     {formErrores.identificacion && <span style={{ fontSize: 12, color: '#ff9a9a', marginTop: 4 }}>{formErrores.identificacion}</span>}
@@ -570,11 +738,7 @@ const Clientes = () => {
                     ) : clientes.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                             <p style={{ opacity: 0.4, fontSize: 14, marginBottom: 16 }}>
-                                {filtro === 'inactivo'
-                                    ? 'No hay clientes inactivos.'
-                                    : filtro === 'activo'
-                                        ? 'No hay clientes activos.'
-                                        : 'No se encontraron clientes.'}
+                                {obtenerMensajeSinClientes(filtro)}
                             </p>
                             {filtro !== 'inactivo' && (
                                 <button className="btn-primary" onClick={() => setShowForm(true)} style={{ margin: '0 auto' }}>
@@ -584,109 +748,18 @@ const Clientes = () => {
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {clientes.map((c) => {
-                                const clientOps = oportunidades.filter(op => op.cliente_id === c.id);
-                                const isExpanded = expandedClienteId === c.id;
-                                const inactivo = !c.estado_activo;
-
-                                return (
-                                    <div key={c.id} style={{
-                                        padding: '16px 20px', borderRadius: 12,
-                                        background: isExpanded ? 'rgba(78,158,255,0.04)' : inactivo ? 'rgba(255,255,255,0.015)' : 'rgba(255,255,255,0.025)',
-                                        border: isExpanded ? '1px solid rgba(78,158,255,0.2)' : inactivo ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(255,255,255,0.06)',
-                                        opacity: inactivo ? 0.65 : 1,
-                                        transition: 'all 0.2s',
-                                    }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                                    <h3 style={{ fontSize: 15, fontWeight: 500, color: '#e8efff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
-                                                        {c.cliente}
-                                                    </h3>
-                                                    {inactivo && (
-                                                        <span style={{ fontSize: 10, fontWeight: 500, padding: '2px 7px', borderRadius: 20, background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.2)', whiteSpace: 'nowrap' }}>
-                                                            INACTIVO
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
-                                                    {c.tipo_identificacion}: <span style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{c.identificacion}</span>
-                                                </p>
-                                            </div>
-
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                                                {/* Badge tipo */}
-                                                <span style={{
-                                                    padding: '3px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 500,
-                                                    background: c.tipo === 'Público' ? 'rgba(30,58,138,0.5)' : 'rgba(6,78,59,0.5)',
-                                                    color: c.tipo === 'Público' ? '#93c5fd' : '#6ee7b7',
-                                                    border: c.tipo === 'Público' ? '1px solid rgba(147,197,253,0.2)' : '1px solid rgba(110,231,183,0.2)',
-                                                }}>
-                                                    {c.tipo}
-                                                </span>
-
-                                                {/* Toggle oportunidades */}
-                                                <button
-                                                    className={`ops-toggle-btn${isExpanded ? ' open' : ''}`}
-                                                    onClick={() => setExpandedClienteId(isExpanded ? null : c.id)}
-                                                >
-                                                    Ops ({clientOps.length}) {isExpanded ? '▲' : '▼'}
-                                                </button>
-
-                                                {/* Editar */}
-                                                <button className="row-action-btn edit" title="Editar cliente" onClick={() => setClienteEditando(c)}>
-                                                    <EditIcon />
-                                                </button>
-
-                                                {/* Desactivar / Reactivar */}
-                                                <button
-                                                    className={`row-action-btn ${c.estado_activo ? 'deactivate' : 'activate'}`}
-                                                    title={c.estado_activo ? 'Desactivar cliente' : 'Reactivar cliente'}
-                                                    onClick={() => setClienteToggle(c)}
-                                                >
-                                                    {c.estado_activo ? <ToggleOffIcon /> : <ToggleOnIcon />}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Panel oportunidades */}
-                                        {isExpanded && (
-                                            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                                                <p style={{ fontSize: 11.5, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
-                                                    Oportunidades Comerciales
-                                                </p>
-                                                {clientOps.length === 0 ? (
-                                                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
-                                                        No existen oportunidades vinculadas a este cliente.
-                                                    </p>
-                                                ) : (
-                                                    <>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                            {clientOps.map(op => (
-                                                                <div key={op.id} style={{
-                                                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                                    background: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: 8,
-                                                                    fontSize: 13, border: '1px solid rgba(255,255,255,0.04)', flexWrap: 'wrap', gap: 8,
-                                                                }}>
-                                                                    <span style={{ fontWeight: 500, color: '#e8efff' }}>{op.nombre_oportunidad}</span>
-                                                                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                                                                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>${op.monto_estimado}</span>
-                                                                        <span style={{ color: '#4e9eff', fontSize: 12 }}>{op.fase_venta}</span>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <button onClick={() => navigate('/oportunidades')}
-                                                            style={{ marginTop: 10, background: 'transparent', color: '#33b5e5', border: 'none', cursor: 'pointer', fontSize: 12.5, padding: '4px 0', textDecoration: 'underline', fontFamily: 'DM Sans, sans-serif' }}>
-                                                            Ver todas en el módulo de oportunidades →
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {clientes.map((c) => (
+                                <ClienteRow
+                                    key={c.id}
+                                    cliente={c}
+                                    clientOps={oportunidades.filter(op => op.cliente_id === c.id)}
+                                    isExpanded={expandedClienteId === c.id}
+                                    onToggleExpand={() => setExpandedClienteId(expandedClienteId === c.id ? null : c.id)}
+                                    onEditar={() => setClienteEditando(c)}
+                                    onToggleEstado={() => setClienteToggle(c)}
+                                    onVerOportunidades={() => navigate('/oportunidades')}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>

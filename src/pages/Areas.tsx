@@ -64,7 +64,7 @@ const Areas: React.FC = () => {
         setForm({ area: e.target.value });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
 
@@ -104,6 +104,63 @@ const Areas: React.FC = () => {
     };
 
     if (!user) return null;
+
+    const renderListaAreas = () => {
+        if (isLoadingData) {
+            return (
+                <div
+                    style={{
+                        textAlign: 'center',
+                        padding: '40px 20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
+                    }}
+                >
+                    <span
+                        className="spinner"
+                        style={{
+                            width: 30,
+                            height: 30,
+                            borderWidth: 3,
+                            marginBottom: 15
+                        }}
+                    />
+
+                    <p style={{ opacity: 0.6 }}>
+                        Cargando áreas...
+                    </p>
+                </div>
+            );
+        }
+
+        if (!Array.isArray(areas) || areas.length === 0) {
+            return (
+                <p style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>
+                    No hay áreas registradas en la base de datos.
+                </p>
+            );
+        }
+
+        return areas.map((a) => (
+            <div
+                key={a.id}
+                style={{
+                    padding: '16px 20px',
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}
+            >
+                <h3 style={{ fontSize: 16, margin: 0 }}>
+                    {a.area}
+                </h3>
+            </div>
+        ));
+    };
 
     return (
         <div className="dash-root">
@@ -160,9 +217,10 @@ const Areas: React.FC = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="form-grid">
                                 <div className="form-group full">
-                                    <label className="field-label">Nombre del Área *</label>
+                                    <label className="field-label" htmlFor="area-nombre">Nombre del Área *</label>
 
                                     <input
+                                        id="area-nombre"
                                         className="field-input"
                                         type="text"
                                         value={form.area}
@@ -185,54 +243,7 @@ const Areas: React.FC = () => {
 
                 <div className="form-card">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {isLoadingData ? (
-                            <div
-                                style={{
-                                    textAlign: 'center',
-                                    padding: '40px 20px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <span
-                                    className="spinner"
-                                    style={{
-                                        width: 30,
-                                        height: 30,
-                                        borderWidth: 3,
-                                        marginBottom: 15
-                                    }}
-                                />
-
-                                <p style={{ opacity: 0.6 }}>
-                                    Cargando áreas...
-                                </p>
-                            </div>
-                        ) : !Array.isArray(areas) || areas.length === 0 ? (
-                            <p style={{ textAlign: 'center', opacity: 0.5, padding: 20 }}>
-                                No hay áreas registradas en la base de datos.
-                            </p>
-                        ) : (
-                            areas.map((a) => (
-                                <div
-                                    key={a.id}
-                                    style={{
-                                        padding: '16px 20px',
-                                        borderRadius: 12,
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid rgba(255,255,255,0.07)',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <h3 style={{ fontSize: 16, margin: 0 }}>
-                                        {a.area}
-                                    </h3>
-                                </div>
-                            ))
-                        )}
+                        {renderListaAreas()}
                     </div>
                 </div>
             </div>

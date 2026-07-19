@@ -79,7 +79,7 @@ const Navbar: React.FC<Props> = ({ user }) => {
         </div>
 
         <button className="logout-btn" onClick={handleLogout}>
-          Salir AHORITA
+          Salir
         </button>
       </div>
     </nav>

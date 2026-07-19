@@ -50,7 +50,7 @@ const SeccionComentarios: React.FC<{ oportunidadId: string | number }> = ({
     cargarComentarios();
   }, [oportunidadId]);
 
-  const handleSubmitComentario = async (e: React.FormEvent) => {
+  const handleSubmitComentario = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!texto.trim()) return;
 
@@ -65,6 +65,93 @@ const SeccionComentarios: React.FC<{ oportunidadId: string | number }> = ({
     } finally {
       setEnviando(false);
     }
+  };
+
+  const renderListaComentarios = () => {
+    if (loading) {
+      return (
+        <div style={{ opacity: 0.5, fontSize: 13, padding: "10px 0" }}>
+          Cargando historial...
+        </div>
+      );
+    }
+
+    if (comentarios.length === 0) {
+      return (
+        <p
+          style={{
+            opacity: 0.4,
+            fontSize: 13,
+            fontStyle: "italic",
+            margin: "10px 0",
+          }}
+        >
+          No hay comentarios registrados.
+        </p>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          maxHeight: "240px",
+          overflowY: "auto",
+          paddingRight: 4,
+        }}
+      >
+        {comentarios.map((c) => (
+          <div
+            key={c.comentario_id}
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              padding: 12,
+              borderRadius: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+                fontSize: 12,
+              }}
+            >
+              <span style={{ fontWeight: 600, color: "#fff" }}>
+                {c.usuario_nombre}{" "}
+                <span style={{ opacity: 0.5, fontWeight: 400 }}>
+                  ({c.usuario_rol})
+                </span>
+              </span>
+              <span style={{ opacity: 0.4 }}>
+                {new Date(c.fecha_creacion).toLocaleDateString("es-EC", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: 13,
+                opacity: 0.85,
+                margin: 0,
+                whiteSpace: "pre-line",
+                lineHeight: 1.4,
+              }}
+            >
+              {c.contenido}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -122,82 +209,7 @@ const SeccionComentarios: React.FC<{ oportunidadId: string | number }> = ({
         </button>
       </form>
 
-      {loading ? (
-        <div style={{ opacity: 0.5, fontSize: 13, padding: "10px 0" }}>
-          Cargando historial...
-        </div>
-      ) : comentarios.length === 0 ? (
-        <p
-          style={{
-            opacity: 0.4,
-            fontSize: 13,
-            fontStyle: "italic",
-            margin: "10px 0",
-          }}
-        >
-          No hay comentarios registrados.
-        </p>
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-            maxHeight: "240px",
-            overflowY: "auto",
-            paddingRight: 4,
-          }}
-        >
-          {comentarios.map((c) => (
-            <div
-              key={c.comentario_id}
-              style={{
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.05)",
-                padding: 12,
-                borderRadius: 10,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 6,
-                  fontSize: 12,
-                }}
-              >
-                <span style={{ fontWeight: 600, color: "#fff" }}>
-                  {c.usuario_nombre}{" "}
-                  <span style={{ opacity: 0.5, fontWeight: 400 }}>
-                    ({c.usuario_rol})
-                  </span>
-                </span>
-                <span style={{ opacity: 0.4 }}>
-                  {new Date(c.fecha_creacion).toLocaleDateString("es-EC", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-              <p
-                style={{
-                  fontSize: 13,
-                  opacity: 0.85,
-                  margin: 0,
-                  whiteSpace: "pre-line",
-                  lineHeight: 1.4,
-                }}
-              >
-                {c.contenido}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      {renderListaComentarios()}
     </div>
   );
 };
@@ -212,6 +224,17 @@ interface EditOportunidadModalProps {
   onSaved: (op: OportunidadListItem) => void;
 }
 
+/* ─── Utilidad compartida de formato de moneda ───────────── */
+const formatCurrency = (value: string) => {
+  const numericValue = value.replaceAll(/\D/g, "");
+  if (!numericValue) return "";
+  const number = Number.parseFloat(numericValue) / 100;
+  return number.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
   oportunidad,
   clientes,
@@ -220,16 +243,6 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
   onClose,
   onSaved,
 }) => {
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/\D/g, "");
-    if (!numericValue) return "";
-    const number = parseFloat(numericValue) / 100;
-    return number.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   const [form, setForm] = useState({
     cliente_id: oportunidad.cliente_id || "",
     nombre_contacto: oportunidad.nombre_contacto || "",
@@ -267,22 +280,22 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
       let value = e.target.value;
 
       if (k === "numero_contacto") {
-        value = value.replace(/\D/g, "").slice(0, 10);
+        value = value.replaceAll(/\D/g, "").slice(0, 10);
       }
       if (k === "nombre_contacto") {
-        value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
+        value = value.replaceAll(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
       }
       if (k === "monto_estimado") {
         value = formatCurrency(value);
       }
       if (k === "codigo_oportunidad") {
-        value = value.replace(/[^A-Za-z0-9-]/g, "");
+        value = value.replaceAll(/[^A-Za-z0-9-]/g, "");
       }
 
       setForm((f) => ({ ...f, [k]: value }));
     };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -299,7 +312,7 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
       return;
     }
 
-    const montoParseado = parseFloat(form.monto_estimado.replace(/,/g, "")) || 0;
+    const montoParseado = Number.parseFloat(form.monto_estimado.replaceAll(/,/g, "")) || 0;
     if (montoParseado <= 0) {
       setError("El monto estimado debe ser mayor a $0.00.");
       return;
@@ -349,7 +362,11 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
         zIndex: 200,
         padding: 24,
       }}
-      onClick={onClose}
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar modal"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === "Escape" || e.key === "Enter") onClose(); }}
     >
       <div
         style={{
@@ -362,7 +379,6 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
           borderRadius: 20,
           padding: "32px 36px",
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         <div
           style={{
@@ -431,8 +447,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
 
           <div className="form-grid">
             <div className="form-group full">
-              <label className="field-label">Cliente Asociado *</label>
+              <label className="field-label" htmlFor="editar-op-cliente">Cliente Asociado *</label>
               <select
+                id="editar-op-cliente"
                 className="field-select"
                 value={form.cliente_id}
                 onChange={handleChange("cliente_id")}
@@ -446,8 +463,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Nombre del Contacto</label>
+              <label className="field-label" htmlFor="editar-op-nombre-contacto">Nombre del Contacto</label>
               <input
+                id="editar-op-nombre-contacto"
                 className="field-input"
                 type="text"
                 value={form.nombre_contacto}
@@ -457,8 +475,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Correo del Contacto</label>
+              <label className="field-label" htmlFor="editar-op-correo-contacto">Correo del Contacto</label>
               <input
+                id="editar-op-correo-contacto"
                 className="field-input"
                 type="email"
                 value={form.correo_contacto}
@@ -468,8 +487,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Teléfono del Contacto</label>
+              <label className="field-label" htmlFor="editar-op-telefono-contacto">Teléfono del Contacto</label>
               <input
+                id="editar-op-telefono-contacto"
                 className="field-input"
                 type="tel"
                 value={form.numero_contacto}
@@ -486,8 +506,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
 
           <div className="form-grid">
             <div className="form-group full">
-              <label className="field-label">Nombre de la Oportunidad *</label>
+              <label className="field-label" htmlFor="editar-op-nombre">Nombre de la Oportunidad *</label>
               <input
+                id="editar-op-nombre"
                 className="field-input"
                 type="text"
                 value={form.nombre_oportunidad}
@@ -500,8 +521,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Área *</label>
+              <label className="field-label" htmlFor="editar-op-area">Área *</label>
               <select
+                id="editar-op-area"
                 className="field-select"
                 value={form.area_id}
                 onChange={handleChange("area_id")}
@@ -515,8 +537,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Código (Opcional)</label>
+              <label className="field-label" htmlFor="editar-op-codigo">Código (Opcional)</label>
               <input
+                id="editar-op-codigo"
                 className="field-input"
                 type="text"
                 value={form.codigo_oportunidad}
@@ -526,8 +549,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Monto Estimado ($) *</label>
+              <label className="field-label" htmlFor="editar-op-monto">Monto Estimado ($) *</label>
               <input
+                id="editar-op-monto"
                 className="field-input"
                 type="text"
                 inputMode="decimal"
@@ -539,8 +563,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Fase de Venta</label>
+              <label className="field-label" htmlFor="editar-op-fase">Fase de Venta</label>
               <select
+                id="editar-op-fase"
                 className="field-select"
                 value={form.fase_venta}
                 onChange={handleChange("fase_venta")}
@@ -553,8 +578,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Probabilidad</label>
+              <label className="field-label" htmlFor="editar-op-probabilidad">Probabilidad</label>
               <select
+                id="editar-op-probabilidad"
                 className="field-select"
                 value={form.probabilidad_venta}
                 onChange={handleChange("probabilidad_venta")}
@@ -566,8 +592,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Fecha de Cierre Esperada *</label>
+              <label className="field-label" htmlFor="editar-op-fecha-cierre">Fecha de Cierre Esperada *</label>
               <input
+                id="editar-op-fecha-cierre"
                 className="field-input"
                 type="date"
                 value={form.fecha_cierre_esperada}
@@ -583,8 +610,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
 
           <div className="form-grid">
             <div className="form-group">
-              <label className="field-label">Responsable Comercial</label>
+              <label className="field-label" htmlFor="editar-op-resp-comercial">Responsable Comercial</label>
               <select
+                id="editar-op-resp-comercial"
                 className="field-select"
                 value={form.resp_comercial_id}
                 onChange={handleChange("resp_comercial_id")}
@@ -597,8 +625,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="field-label">Responsable Técnico</label>
+              <label className="field-label" htmlFor="editar-op-resp-tecnico">Responsable Técnico</label>
               <select
+                id="editar-op-resp-tecnico"
                 className="field-select"
                 value={form.resp_tecnico_id}
                 onChange={handleChange("resp_tecnico_id")}
@@ -611,8 +640,9 @@ const EditOportunidadModal: React.FC<EditOportunidadModalProps> = ({
             </div>
 
             <div className="form-group full">
-              <label className="field-label">Descripción Detallada</label>
+              <label className="field-label" htmlFor="editar-op-descripcion">Descripción Detallada</label>
               <textarea
+                id="editar-op-descripcion"
                 className="field-input"
                 style={{ minHeight: "80px", resize: "vertical" }}
                 value={form.descripcion}
@@ -725,15 +755,6 @@ const Oportunidades: React.FC = () => {
   }, [user?.id]);
 
   // 3. Funciones auxiliares y manejadores
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/\D/g, "");
-    if (!numericValue) return "";
-    const number = parseFloat(numericValue) / 100;
-    return number.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
   const scrollToError = () => {
     setTimeout(() => {
       errorRef.current?.scrollIntoView({
@@ -753,17 +774,17 @@ const Oportunidades: React.FC = () => {
       let value = e.target.value;
 
       if (k === "numero_contacto") {
-        value = value.replace(/\D/g, "");
+        value = value.replaceAll(/\D/g, "");
         value = value.slice(0, 10);
       }
       if (k === "nombre_contacto") {
-        value = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
+        value = value.replaceAll(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
       }
       if (k === "monto_estimado") {
         value = formatCurrency(value);
       }
       if (k === "codigo_oportunidad") {
-        value = value.replace(/[^A-Za-z0-9-]/g, "");
+        value = value.replaceAll(/[^A-Za-z0-9-]/g, "");
       }
 
       setForm((f) => ({
@@ -772,7 +793,7 @@ const Oportunidades: React.FC = () => {
       }));
     };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -797,7 +818,7 @@ const Oportunidades: React.FC = () => {
     }
 
     const montoParseado =
-      parseFloat(form.monto_estimado.replace(/,/g, "")) || 0;
+      Number.parseFloat(form.monto_estimado.replaceAll(/,/g, "")) || 0;
 
     if (montoParseado <= 0) {
       setError("El monto estimado debe ser mayor a $0.00.");
@@ -885,422 +906,50 @@ const Oportunidades: React.FC = () => {
     return cumpleCliente && cumpleFase;
   });
 
-  if (!user) return null;
-
-  // 4. Renderizado principal
-  return (
-    <div className="dash-root">
-      <Navbar user={user} />
-
-      <div className="page-content">
+  const renderContenidoLista = () => {
+    if (isLoadingData) {
+      return (
         <div
           style={{
+            textAlign: "center",
+            padding: "40px 20px",
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: "column",
             alignItems: "center",
-            marginBottom: 28,
-            flexWrap: "wrap",
-            gap: 16,
           }}
         >
-          <div>
-            <p className="eyebrow">Gestión Comercial</p>
-            <h1
-              className="page-title"
-              style={{ fontSize: 32, marginBottom: 0 }}
-            >
-              Oportunidades
-            </h1>
-          </div>
-
-          <button
-            className={showForm ? "btn-secondary" : "btn-primary"}
-            onClick={() => setShowForm(!showForm)}
-          >
-            {showForm ? "Cancelar" : "+ Nueva Oportunidad"}
-          </button>
-        </div>
-
-        {error && (
-          <div
-            ref={errorRef}
-            className="error-box"
+          <span
+            className="spinner"
             style={{
-              marginBottom: 20,
-              background: "#ff000022",
-              border: "1px solid #ff4d4f",
-              padding: 14,
-              borderRadius: 10,
-              color: "#fff",
-              fontWeight: 500,
-              scrollMarginTop: "120px",
-              boxShadow: "0 0 10px rgba(255,0,0,0.2)",
+              width: 30,
+              height: 30,
+              borderWidth: 3,
+              marginBottom: 15,
             }}
-          >
-            <strong>Error:</strong> {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="success-banner" style={{ marginBottom: 20 }}>
-            <IconCheck /> Oportunidad registrada con éxito.
-          </div>
-        )}
-
-        {showForm && (
-          <div
-            className="form-card"
-            style={{ marginBottom: 32, border: "1px solid var(--accent)" }}
-          >
-            <h2
-              style={{
-                marginBottom: 20,
-                fontSize: 18,
-                borderBottom: "1px solid #333",
-                paddingBottom: 10,
-              }}
-            >
-              Ingreso de Oportunidad
-            </h2>
-
-            <form onSubmit={handleSubmit}>
-              <h3
-                style={{
-                  fontSize: 14,
-                  color: "var(--accent)",
-                  marginTop: 20,
-                  marginBottom: 15,
-                }}
-              >
-                Datos del Cliente
-              </h3>
-
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label className="field-label">Cliente Asociado *</label>
-                  <select
-                    className="field-select"
-                    value={form.cliente_id}
-                    onChange={handleChange("cliente_id")}
-                    required
-                  >
-                    <option value="">Seleccione un cliente...</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.cliente}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Nombre del Contacto</label>
-                  <input
-                    className="field-input"
-                    type="text"
-                    value={form.nombre_contacto}
-                    onChange={handleChange("nombre_contacto")}
-                    placeholder="Ej: Juan Pérez"
-                    pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$"
-                    title="Ingrese solo letras"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Correo del Contacto</label>
-                  <input
-                    className="field-input"
-                    type="email"
-                    value={form.correo_contacto}
-                    onChange={handleChange("correo_contacto")}
-                    placeholder="juan@empresa.com"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Teléfono del Contacto</label>
-                  <input
-                    className="field-input"
-                    type="tel"
-                    value={form.numero_contacto}
-                    onChange={handleChange("numero_contacto")}
-                    placeholder="0999999999"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-
-              <h3
-                style={{
-                  fontSize: 14,
-                  color: "var(--accent)",
-                  marginTop: 30,
-                  marginBottom: 15,
-                }}
-              >
-                Datos de la Oportunidad
-              </h3>
-
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label className="field-label">
-                    Nombre de la Oportunidad *
-                  </label>
-                  <input
-                    className="field-input"
-                    type="text"
-                    value={form.nombre_oportunidad}
-                    onChange={handleChange("nombre_oportunidad")}
-                    required
-                    minLength={5}
-                    maxLength={150}
-                    placeholder="Ej: Implementación de ERP"
-                    title="Debe tener entre 5 y 150 caracteres"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Área *</label>
-                  <select
-                    className="field-select"
-                    value={form.area_id}
-                    onChange={handleChange("area_id")}
-                    required
-                  >
-                    <option value="">Seleccione el área...</option>
-                    {areas.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.area}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Código (Opcional)</label>
-                  <input
-                    className="field-input"
-                    type="text"
-                    value={form.codigo_oportunidad}
-                    onChange={handleChange("codigo_oportunidad")}
-                    placeholder="Ej: OP-2026-001"
-                    pattern="^[A-Za-z0-9-]+$"
-                    title="Solo letras, números y guiones"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Monto Estimado ($) *</label>
-                  <input
-                    className="field-input"
-                    type="text"
-                    inputMode="decimal"
-                    value={form.monto_estimado}
-                    onChange={handleChange("monto_estimado")}
-                    required
-                    placeholder="$0.00"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Fase de Venta</label>
-                  <select
-                    className="field-select"
-                    value={form.fase_venta}
-                    onChange={handleChange("fase_venta")}
-                  >
-                    <option value="Prospección">Prospección</option>
-                    <option value="Propuesta">Propuesta</option>
-                    <option value="Negociación">Negociación</option>
-                    <option value="Cerrada Ganada">Cerrada Ganada</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Probabilidad</label>
-                  <select
-                    className="field-select"
-                    value={form.probabilidad_venta}
-                    onChange={handleChange("probabilidad_venta")}
-                  >
-                    <option value="Alta">Alta</option>
-                    <option value="Media">Media</option>
-                    <option value="Baja">Baja</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">
-                    Fecha de Cierre Esperada *
-                  </label>
-                  <input
-                    className="field-input"
-                    type="date"
-                    value={form.fecha_cierre_esperada}
-                    onChange={handleChange("fecha_cierre_esperada")}
-                    required
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-              </div>
-
-              <h3
-                style={{
-                  fontSize: 14,
-                  color: "var(--accent)",
-                  marginTop: 30,
-                  marginBottom: 15,
-                }}
-              >
-                Equipo Asignado
-              </h3>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="field-label">Responsable Comercial</label>
-                  <select
-                    className="field-select"
-                    value={form.resp_comercial_id}
-                    onChange={handleChange("resp_comercial_id")}
-                  >
-                    <option value="">Sin asignar...</option>
-                    {usuarios.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="field-label">Responsable Técnico</label>
-                  <select
-                    className="field-select"
-                    value={form.resp_tecnico_id}
-                    onChange={handleChange("resp_tecnico_id")}
-                  >
-                    <option value="">Sin asignar...</option>
-                    {usuarios.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group full">
-                  <label className="field-label">Descripción Detallada</label>
-                  <textarea
-                    className="field-input"
-                    style={{ minHeight: "80px", resize: "vertical" }}
-                    value={form.descripcion}
-                    onChange={handleChange("descripcion")}
-                    placeholder="Detalles adicionales de la oportunidad..."
-                    maxLength={1000}
-                  />
-                </div>
-              </div>
-
-              <div
-                className="form-footer"
-                style={{ marginTop: 24, textAlign: "right" }}
-              >
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={loading}
-                >
-                  {loading ? <span className="spinner" /> : <IconSend />}
-                  {loading ? " Guardando..." : " Guardar Oportunidad"}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* BARRA DE BÚSQUEDA Y FILTROS */}
-        <div style={{ 
-            display: 'flex', 
-            gap: 16, 
-            marginBottom: 20, 
-            alignItems: 'flex-end', 
-            flexWrap: 'wrap', 
-            background: 'rgba(255,255,255,0.02)', 
-            padding: '16px 20px', 
-            borderRadius: 12, 
-            border: '1px solid rgba(255,255,255,0.05)' 
-        }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-                <label className="field-label">Buscar por Cliente</label>
-                <input
-                    className="field-input"
-                    type="text"
-                    placeholder="Escriba el nombre del cliente..."
-                    value={filtroCliente}
-                    onChange={(e) => setFiltroCliente(e.target.value)}
-                />
-            </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
-                <label className="field-label">Filtrar por Estado</label>
-                <select
-                    className="field-select"
-                    value={filtroFase}
-                    onChange={(e) => setFiltroFase(e.target.value)}
-                >
-                    <option value="">Todos los estados</option>
-                    <option value="Prospección">Prospección</option>
-                    <option value="Propuesta">Propuesta</option>
-                    <option value="Negociación">Negociación</option>
-                    <option value="Cerrada Ganada">Cerrada Ganada</option>
-                </select>
-            </div>
-            {/* CA13.4: Botón de Limpiar Filtros */}
-            <button
-                className="btn-secondary"
-                onClick={() => {
-                    setFiltroCliente('');
-                    setFiltroFase('');
-                }}
-                style={{ height: '42px', padding: '0 20px' }}
-            >
-                Limpiar Filtros
-            </button>
+          />
+          <p style={{ opacity: 0.6 }}>Cargando oportunidades...</p>
         </div>
+      );
+    }
 
-        <div className="form-card">
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {isLoadingData ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 20px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                }}
-              >
-                <span
-                  className="spinner"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderWidth: 3,
-                    marginBottom: 15,
-                  }}
-                />
-                <p style={{ opacity: 0.6 }}>Cargando oportunidades...</p>
-              </div>
-            ) : oportunidades.length === 0 ? (
-              <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
-                No hay oportunidades registradas aún.
-              </p>
-            ) : oportunidadesFiltradas.length === 0 ? (
-              /* CA13.3: Mensaje dinámico si no hay coincidencias de búsqueda */
-              <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
-                No se encontraron oportunidades con los criterios seleccionados.
-              </p>
-            ) : (
-              oportunidadesFiltradas.map((op) => {
+    if (oportunidades.length === 0) {
+      return (
+        <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
+          No hay oportunidades registradas aún.
+        </p>
+      );
+    }
+
+    if (oportunidadesFiltradas.length === 0) {
+      /* CA13.3: Mensaje dinámico si no hay coincidencias de búsqueda */
+      return (
+        <p style={{ textAlign: "center", opacity: 0.5, padding: 20 }}>
+          No se encontraron oportunidades con los criterios seleccionados.
+        </p>
+      );
+    }
+
+    return oportunidadesFiltradas.map((op) => {
                 const cliente = clientes.find((c) => c.id === op.cliente_id);
                 const area = areas.find((a) => a.id === op.area_id);
                 const respComercial = usuarios.find(
@@ -1326,6 +975,15 @@ const Oportunidades: React.FC = () => {
                     {/* HEADER */}
                     <div
                       onClick={() => setExpandedId(expanded ? null : op.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={expanded}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedId(expanded ? null : op.id);
+                        }
+                      }}
                       style={{
                         padding: "16px 20px",
                         display: "flex",
@@ -1544,7 +1202,409 @@ const Oportunidades: React.FC = () => {
                   </div>
                 );
               })
-            )}
+  };
+
+  if (!user) return null;
+
+  // 4. Renderizado principal
+  return (
+    <div className="dash-root">
+      <Navbar user={user} />
+
+      <div className="page-content">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 28,
+            flexWrap: "wrap",
+            gap: 16,
+          }}
+        >
+          <div>
+            <p className="eyebrow">Gestión Comercial</p>
+            <h1
+              className="page-title"
+              style={{ fontSize: 32, marginBottom: 0 }}
+            >
+              Oportunidades
+            </h1>
+          </div>
+
+          <button
+            className={showForm ? "btn-secondary" : "btn-primary"}
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? "Cancelar" : "+ Nueva Oportunidad"}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            ref={errorRef}
+            className="error-box"
+            style={{
+              marginBottom: 20,
+              background: "#ff000022",
+              border: "1px solid #ff4d4f",
+              padding: 14,
+              borderRadius: 10,
+              color: "#fff",
+              fontWeight: 500,
+              scrollMarginTop: "120px",
+              boxShadow: "0 0 10px rgba(255,0,0,0.2)",
+            }}
+          >
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="success-banner" style={{ marginBottom: 20 }}>
+            <IconCheck /> Oportunidad registrada con éxito.
+          </div>
+        )}
+
+        {showForm && (
+          <div
+            className="form-card"
+            style={{ marginBottom: 32, border: "1px solid var(--accent)" }}
+          >
+            <h2
+              style={{
+                marginBottom: 20,
+                fontSize: 18,
+                borderBottom: "1px solid #333",
+                paddingBottom: 10,
+              }}
+            >
+              Ingreso de Oportunidad
+            </h2>
+
+            <form onSubmit={handleSubmit}>
+              <h3
+                style={{
+                  fontSize: 14,
+                  color: "var(--accent)",
+                  marginTop: 20,
+                  marginBottom: 15,
+                }}
+              >
+                Datos del Cliente
+              </h3>
+
+              <div className="form-grid">
+                <div className="form-group full">
+                  <label className="field-label" htmlFor="nueva-op-cliente">Cliente Asociado *</label>
+                  <select
+                    id="nueva-op-cliente"
+                    className="field-select"
+                    value={form.cliente_id}
+                    onChange={handleChange("cliente_id")}
+                    required
+                  >
+                    <option value="">Seleccione un cliente...</option>
+                    {clientes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.cliente}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-nombre-contacto">Nombre del Contacto</label>
+                  <input
+                    id="nueva-op-nombre-contacto"
+                    className="field-input"
+                    type="text"
+                    value={form.nombre_contacto}
+                    onChange={handleChange("nombre_contacto")}
+                    placeholder="Ej: Juan Pérez"
+                    pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$"
+                    title="Ingrese solo letras"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-correo-contacto">Correo del Contacto</label>
+                  <input
+                    id="nueva-op-correo-contacto"
+                    className="field-input"
+                    type="email"
+                    value={form.correo_contacto}
+                    onChange={handleChange("correo_contacto")}
+                    placeholder="juan@empresa.com"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-telefono-contacto">Teléfono del Contacto</label>
+                  <input
+                    id="nueva-op-telefono-contacto"
+                    className="field-input"
+                    type="tel"
+                    value={form.numero_contacto}
+                    onChange={handleChange("numero_contacto")}
+                    placeholder="0999999999"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+
+              <h3
+                style={{
+                  fontSize: 14,
+                  color: "var(--accent)",
+                  marginTop: 30,
+                  marginBottom: 15,
+                }}
+              >
+                Datos de la Oportunidad
+              </h3>
+
+              <div className="form-grid">
+                <div className="form-group full">
+                  <label className="field-label" htmlFor="nueva-op-nombre">
+                    Nombre de la Oportunidad *
+                  </label>
+                  <input
+                    id="nueva-op-nombre"
+                    className="field-input"
+                    type="text"
+                    value={form.nombre_oportunidad}
+                    onChange={handleChange("nombre_oportunidad")}
+                    required
+                    minLength={5}
+                    maxLength={150}
+                    placeholder="Ej: Implementación de ERP"
+                    title="Debe tener entre 5 y 150 caracteres"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-area">Área *</label>
+                  <select
+                    id="nueva-op-area"
+                    className="field-select"
+                    value={form.area_id}
+                    onChange={handleChange("area_id")}
+                    required
+                  >
+                    <option value="">Seleccione el área...</option>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.area}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-codigo">Código (Opcional)</label>
+                  <input
+                    id="nueva-op-codigo"
+                    className="field-input"
+                    type="text"
+                    value={form.codigo_oportunidad}
+                    onChange={handleChange("codigo_oportunidad")}
+                    placeholder="Ej: OP-2026-001"
+                    pattern="^[A-Za-z0-9-]+$"
+                    title="Solo letras, números y guiones"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-monto">Monto Estimado ($) *</label>
+                  <input
+                    id="nueva-op-monto"
+                    className="field-input"
+                    type="text"
+                    inputMode="decimal"
+                    value={form.monto_estimado}
+                    onChange={handleChange("monto_estimado")}
+                    required
+                    placeholder="$0.00"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-fase">Fase de Venta</label>
+                  <select
+                    id="nueva-op-fase"
+                    className="field-select"
+                    value={form.fase_venta}
+                    onChange={handleChange("fase_venta")}
+                  >
+                    <option value="Prospección">Prospección</option>
+                    <option value="Propuesta">Propuesta</option>
+                    <option value="Negociación">Negociación</option>
+                    <option value="Cerrada Ganada">Cerrada Ganada</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-probabilidad">Probabilidad</label>
+                  <select
+                    id="nueva-op-probabilidad"
+                    className="field-select"
+                    value={form.probabilidad_venta}
+                    onChange={handleChange("probabilidad_venta")}
+                  >
+                    <option value="Alta">Alta</option>
+                    <option value="Media">Media</option>
+                    <option value="Baja">Baja</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-fecha-cierre">
+                    Fecha de Cierre Esperada *
+                  </label>
+                  <input
+                    id="nueva-op-fecha-cierre"
+                    className="field-input"
+                    type="date"
+                    value={form.fecha_cierre_esperada}
+                    onChange={handleChange("fecha_cierre_esperada")}
+                    required
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+              </div>
+
+              <h3
+                style={{
+                  fontSize: 14,
+                  color: "var(--accent)",
+                  marginTop: 30,
+                  marginBottom: 15,
+                }}
+              >
+                Equipo Asignado
+              </h3>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-resp-comercial">Responsable Comercial</label>
+                  <select
+                    id="nueva-op-resp-comercial"
+                    className="field-select"
+                    value={form.resp_comercial_id}
+                    onChange={handleChange("resp_comercial_id")}
+                  >
+                    <option value="">Sin asignar...</option>
+                    {usuarios.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="field-label" htmlFor="nueva-op-resp-tecnico">Responsable Técnico</label>
+                  <select
+                    id="nueva-op-resp-tecnico"
+                    className="field-select"
+                    value={form.resp_tecnico_id}
+                    onChange={handleChange("resp_tecnico_id")}
+                  >
+                    <option value="">Sin asignar...</option>
+                    {usuarios.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group full">
+                  <label className="field-label" htmlFor="nueva-op-descripcion">Descripción Detallada</label>
+                  <textarea
+                    id="nueva-op-descripcion"
+                    className="field-input"
+                    style={{ minHeight: "80px", resize: "vertical" }}
+                    value={form.descripcion}
+                    onChange={handleChange("descripcion")}
+                    placeholder="Detalles adicionales de la oportunidad..."
+                    maxLength={1000}
+                  />
+                </div>
+              </div>
+
+              <div
+                className="form-footer"
+                style={{ marginTop: 24, textAlign: "right" }}
+              >
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? <span className="spinner" /> : <IconSend />}
+                  {loading ? " Guardando..." : " Guardar Oportunidad"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* BARRA DE BÚSQUEDA Y FILTROS */}
+        <div style={{ 
+            display: 'flex', 
+            gap: 16, 
+            marginBottom: 20, 
+            alignItems: 'flex-end', 
+            flexWrap: 'wrap', 
+            background: 'rgba(255,255,255,0.02)', 
+            padding: '16px 20px', 
+            borderRadius: 12, 
+            border: '1px solid rgba(255,255,255,0.05)' 
+        }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="field-label" htmlFor="filtro-cliente">Buscar por Cliente</label>
+                <input
+                    id="filtro-cliente"
+                    className="field-input"
+                    type="text"
+                    placeholder="Escriba el nombre del cliente..."
+                    value={filtroCliente}
+                    onChange={(e) => setFiltroCliente(e.target.value)}
+                />
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="field-label" htmlFor="filtro-fase">Filtrar por Estado</label>
+                <select
+                    id="filtro-fase"
+                    className="field-select"
+                    value={filtroFase}
+                    onChange={(e) => setFiltroFase(e.target.value)}
+                >
+                    <option value="">Todos los estados</option>
+                    <option value="Prospección">Prospección</option>
+                    <option value="Propuesta">Propuesta</option>
+                    <option value="Negociación">Negociación</option>
+                    <option value="Cerrada Ganada">Cerrada Ganada</option>
+                </select>
+            </div>
+            {/* CA13.4: Botón de Limpiar Filtros */}
+            <button
+                className="btn-secondary"
+                onClick={() => {
+                    setFiltroCliente('');
+                    setFiltroFase('');
+                }}
+                style={{ height: '42px', padding: '0 20px' }}
+            >
+                Limpiar Filtros
+            </button>
+        </div>
+
+        <div className="form-card">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {renderContenidoLista()}
           </div>
         </div>
       </div>
