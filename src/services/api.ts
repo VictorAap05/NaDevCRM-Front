@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   //Deploy Fix
-  baseURL: import.meta.env.VITE_API_URL_LOCAL,
+  baseURL: import.meta.env.VITE_API_URL,
   
   headers: {
     'Content-Type': 'application/json',
