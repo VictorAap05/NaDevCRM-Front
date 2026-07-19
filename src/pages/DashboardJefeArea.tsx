@@ -4,8 +4,26 @@ import type { Usuario } from '../types/auth';
 import { obtenerEstadisticasJefe, type JefeDashboardStats } from '../services/dashboardService';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Rectangle, Sector, Legend
 } from 'recharts';
+
+interface BarShapeProps {
+  index?: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+}
+
+interface PieShapeProps {
+  index?: number;
+  cx?: number;
+  cy?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  startAngle?: number;
+  endAngle?: number;
+}
 
 const COLORS = {
   purpleGrad: 'linear-gradient(135deg, #b05cfd 0%, #fa59ce 100%)',
@@ -124,11 +142,13 @@ const DashboardJefeArea = ({ user }: { user: Usuario }) => {
                       <XAxis dataKey="name" stroke={COLORS.textMuted} fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis stroke={COLORS.textMuted} fontSize={12} tickLine={false} axisLine={false} />
                       <ChartTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#25293c', border: 'none', borderRadius: '8px', color: '#fff' }} />
-                      <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
+                      <Bar
+                        dataKey="valor"
+                        radius={[6, 6, 0, 0]}
+                        shape={(props: BarShapeProps) => (
+                          <Rectangle {...props} fill={chartData[props.index ?? 0]?.color ?? COLORS.chartOrange} />
+                        )}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -139,11 +159,19 @@ const DashboardJefeArea = ({ user }: { user: Usuario }) => {
                 <div style={{ width: '100%', height: '300px' }}>
                   <ResponsiveContainer>
                     <PieChart>
-                      <Pie data={chartData} cx="50%" cy="45%" innerRadius={80} outerRadius={110} paddingAngle={5} dataKey="valor" stroke="none">
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={80}
+                        outerRadius={110}
+                        paddingAngle={5}
+                        dataKey="valor"
+                        stroke="none"
+                        shape={(props: PieShapeProps) => (
+                          <Sector {...props} fill={chartData[props.index ?? 0]?.color ?? COLORS.chartOrange} />
+                        )}
+                      />
                       <ChartTooltip contentStyle={{ background: '#25293c', border: 'none', borderRadius: '8px', color: '#fff' }} />
                       <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px', color: COLORS.textMuted }} />
                     </PieChart>

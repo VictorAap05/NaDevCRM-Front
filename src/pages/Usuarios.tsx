@@ -67,7 +67,7 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
         if (errores[k]) setErrores(prev => { const n = { ...prev }; delete n[k]; return n; });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setErrorGlobal('');
         
@@ -91,8 +91,15 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
     };
 
     return (
-        <div style={styles.overlay} onClick={onClose}>
-            <div style={styles.modal} onClick={e => e.stopPropagation()}>
+        <div
+            style={styles.overlay}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); }}
+        >
+            <div style={styles.modal}>
                 <div style={styles.modalHeader}>
                     <div>
                         <p style={styles.modalEyebrow}>Gestión de Cuentas</p>
@@ -105,28 +112,28 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
                 <form onSubmit={handleSubmit}>
                     <div style={styles.formGrid}>
                         <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                            <label className="field-label"> Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.nombre ? fieldErrorStyle : undefined} type="text" value={form.nombre} onChange={set('nombre')} />
+                            <label className="field-label" htmlFor="editar-usuario-nombre"> Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-usuario-nombre" className="field-input" style={errores.nombre ? fieldErrorStyle : undefined} type="text" value={form.nombre} onChange={set('nombre')} />
                             {errores.nombre && <span style={styles.fieldError}>{errores.nombre}</span>}
                         </div>
                         <div style={styles.formGroup}>
-                            <label className="field-label">Cédula <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.cedula ? fieldErrorStyle : undefined} type="text" value={form.cedula} onChange={set('cedula')} maxLength={10} />
+                            <label className="field-label" htmlFor="editar-usuario-cedula">Cédula <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-usuario-cedula" className="field-input" style={errores.cedula ? fieldErrorStyle : undefined} type="text" value={form.cedula} onChange={set('cedula')} maxLength={10} />
                             {errores.cedula && <span style={styles.fieldError}>{errores.cedula}</span>}
                         </div>
                         <div style={styles.formGroup}>
-                            <label className="field-label">Teléfono <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.telefono ? fieldErrorStyle : undefined} type="text" value={form.telefono} onChange={set('telefono')} maxLength={10} />
+                            <label className="field-label" htmlFor="editar-usuario-telefono">Teléfono <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-usuario-telefono" className="field-input" style={errores.telefono ? fieldErrorStyle : undefined} type="text" value={form.telefono} onChange={set('telefono')} maxLength={10} />
                             {errores.telefono && <span style={styles.fieldError}>{errores.telefono}</span>}
                         </div>
                         <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
-                            <label className="field-label">Email <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <input className="field-input" style={errores.email ? fieldErrorStyle : undefined} type="email" value={form.email} onChange={set('email')} />
+                            <label className="field-label" htmlFor="editar-usuario-email">Email <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <input id="editar-usuario-email" className="field-input" style={errores.email ? fieldErrorStyle : undefined} type="email" value={form.email} onChange={set('email')} />
                             {errores.email && <span style={styles.fieldError}>{errores.email}</span>}
                         </div>
                         <div style={styles.formGroup}>
-                            <label className="field-label">Rol <span style={{ color: '#ff9a9a' }}>*</span></label>
-                            <select className="field-select" value={form.rol} onChange={set('rol')}>
+                            <label className="field-label" htmlFor="editar-usuario-rol">Rol <span style={{ color: '#ff9a9a' }}>*</span></label>
+                            <select id="editar-usuario-rol" className="field-select" value={form.rol} onChange={set('rol')}>
                                 <option value="Administrador">Administrador</option>
                                 <option value="Jefe de Area">Jefe de Área</option>
                                 <option value="Responsable">Responsable</option>
@@ -134,8 +141,8 @@ const EditModal: React.FC<EditModalProps> = ({ usuario, onClose, onSaved }) => {
                         </div>
                         {form.rol === 'Jefe de Area' && (
                             <div style={styles.formGroup}>
-                                <label className="field-label">Área Asignada <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                <select className="field-select" style={errores.areas ? fieldErrorStyle : undefined} value={form.areas} onChange={set('areas')}>
+                                <label className="field-label" htmlFor="editar-usuario-area">Área Asignada <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                <select id="editar-usuario-area" className="field-select" style={errores.areas ? fieldErrorStyle : undefined} value={form.areas} onChange={set('areas')}>
                                     <option value="">Seleccione...</option>
                                     <option value="Tecnología">Tecnología</option>
                                     <option value="IOT">IOT</option>
@@ -180,9 +187,25 @@ const ToggleStatusModal: React.FC<ToggleModalProps> = ({ usuario, onClose, onTog
         } finally { setLoading(false); }
     };
 
+    let contenidoBotonConfirmar: React.ReactNode;
+    if (loading) {
+        contenidoBotonConfirmar = <><span className="spinner" /> Procesando...</>;
+    } else if (isActivo) {
+        contenidoBotonConfirmar = <><DeactivateIcon /> Sí, desactivar</>;
+    } else {
+        contenidoBotonConfirmar = <><ActivateIcon /> Sí, activar</>;
+    }
+
     return (
-        <div style={styles.overlay} onClick={onClose}>
-            <div style={{ ...styles.modal, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div
+            style={styles.overlay}
+            role="button"
+            tabIndex={0}
+            aria-label="Cerrar modal"
+            onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+            onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); }}
+        >
+            <div style={{ ...styles.modal, maxWidth: 480 }}>
                 <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
                     <div style={{ width: 56, height: 56, borderRadius: '50%', background: `rgba(${colorHex},0.12)`, border: `1px solid rgba(${colorHex},0.25)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: colorSolid }}>
                         {isActivo ? <WarnIcon /> : <ActivateIcon />}
@@ -207,7 +230,7 @@ const ToggleStatusModal: React.FC<ToggleModalProps> = ({ usuario, onClose, onTog
                         fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         boxShadow: `0 4px 16px rgba(${colorHex},0.35)`, opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s',
                     }}>
-                        {loading ? <><span className="spinner" /> Procesando...</> : <>{isActivo ? <DeactivateIcon /> : <ActivateIcon />} Sí, {isActivo ? 'desactivar' : 'activar'}</>}
+                        {contenidoBotonConfirmar}
                     </button>
                 </div>
             </div>
@@ -262,7 +285,7 @@ const Usuarios = () => {
         setTimeout(() => setSuccessMessage(''), 3500);
     };
 
-    const handleCreateSubmit = async (e: React.FormEvent) => {
+    const handleCreateSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
 
@@ -341,42 +364,42 @@ const Usuarios = () => {
                         <form onSubmit={handleCreateSubmit}>
                             <div className="form-grid">
                                 <div className="form-group full">
-                                    <label className="field-label">Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" type="text" value={form.nombre} onChange={handleChange('nombre')} placeholder="Ej: Emily ..." required />
+                                    <label className="field-label" htmlFor="nuevo-usuario-nombre">Nombre Completo <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-usuario-nombre" className="field-input" type="text" value={form.nombre} onChange={handleChange('nombre')} placeholder="Ej: Emily ..." required />
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Cédula <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" type="text" value={form.cedula} onChange={handleChange('cedula')} maxLength={10} placeholder="172xxxxxxx" required />
+                                    <label className="field-label" htmlFor="nuevo-usuario-cedula">Cédula <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-usuario-cedula" className="field-input" type="text" value={form.cedula} onChange={handleChange('cedula')} maxLength={10} placeholder="172xxxxxxx" required />
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Teléfono <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" type="text" value={form.telefono} onChange={handleChange('telefono')} maxLength={10} placeholder="0987654321" required />
+                                    <label className="field-label" htmlFor="nuevo-usuario-telefono">Teléfono <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-usuario-telefono" className="field-input" type="text" value={form.telefono} onChange={handleChange('telefono')} maxLength={10} placeholder="0987654321" required />
                                 </div>
                                 <div className="form-group full">
-                                    <label className="field-label">Email <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <input className="field-input" type="email" value={form.email} onChange={handleChange('email')} placeholder="usuario@epn.edu.ec" required />
+                                    <label className="field-label" htmlFor="nuevo-usuario-email">Email <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <input id="nuevo-usuario-email" className="field-input" type="email" value={form.email} onChange={handleChange('email')} placeholder="usuario@epn.edu.ec" required />
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Contraseña <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <label className="field-label" htmlFor="nuevo-usuario-password">Contraseña <span style={{ color: '#ff9a9a' }}>*</span></label>
                                     <div style={{ position: 'relative' }}>
-                                        <input className="field-input" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange('password')} placeholder="Min. 8 caracteres" required style={{ paddingRight: '40px', width: '100%' }} />
+                                        <input id="nuevo-usuario-password" className="field-input" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange('password')} placeholder="Min. 8 caracteres" required style={{ paddingRight: '40px', width: '100%' }} />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#718096', padding: 0, display: 'flex' }} tabIndex={-1}>
                                             {showPassword ? <IconEyeOff /> : <IconEye />}
                                         </button>
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Confirmar Contraseña <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <label className="field-label" htmlFor="nuevo-usuario-password-confirm">Confirmar Contraseña <span style={{ color: '#ff9a9a' }}>*</span></label>
                                     <div style={{ position: 'relative' }}>
-                                        <input className="field-input" type={showPasswordConfirm ? "text" : "password"} value={form.passwordConfirm} onChange={handleChange('passwordConfirm')} placeholder="Repite la contraseña" required style={{ paddingRight: '40px', width: '100%' }} />
+                                        <input id="nuevo-usuario-password-confirm" className="field-input" type={showPasswordConfirm ? "text" : "password"} value={form.passwordConfirm} onChange={handleChange('passwordConfirm')} placeholder="Repite la contraseña" required style={{ paddingRight: '40px', width: '100%' }} />
                                         <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#718096', padding: 0, display: 'flex' }} tabIndex={-1}>
                                             {showPasswordConfirm ? <IconEyeOff /> : <IconEye />}
                                         </button>
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="field-label">Rol <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                    <select className="field-select" value={form.rol} onChange={handleChange('rol')}>
+                                    <label className="field-label" htmlFor="nuevo-usuario-rol">Rol <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                    <select id="nuevo-usuario-rol" className="field-select" value={form.rol} onChange={handleChange('rol')}>
                                         <option value="Administrador">Administrador</option>
                                         <option value="Jefe de Area">Jefe de Área</option>
                                         <option value="Responsable">Responsable</option>
@@ -384,8 +407,8 @@ const Usuarios = () => {
                                 </div>
                                 {form.rol === 'Jefe de Area' && (
                                     <div className="form-group">
-                                        <label className="field-label">Área Asignada <span style={{ color: '#ff9a9a' }}>*</span></label>
-                                        <select className="field-select" value={form.areas} onChange={handleChange('areas')} required>
+                                        <label className="field-label" htmlFor="nuevo-usuario-area">Área Asignada <span style={{ color: '#ff9a9a' }}>*</span></label>
+                                        <select id="nuevo-usuario-area" className="field-select" value={form.areas} onChange={handleChange('areas')} required>
                                             <option value="">Seleccione...</option>
                                             <option value="Tecnología">Tecnología</option>
                                             <option value="IOT">IOT</option>
@@ -431,7 +454,7 @@ const Usuarios = () => {
 
                                             {user?.rol === 'Administrador' && (
                                                 <>
-                                                    <button className="row-action-btn edit" title="Editar usuario" onClick={() => setUsuarioEditando(u)} disabled={!u.estado_activo} style={{ opacity: !u.estado_activo ? 0.3 : 1, cursor: !u.estado_activo ? 'not-allowed' : 'pointer' }}>
+                                                    <button className="row-action-btn edit" title="Editar usuario" onClick={() => setUsuarioEditando(u)} disabled={!u.estado_activo} style={{ opacity: u.estado_activo ? 1 : 0.3, cursor: u.estado_activo ? 'pointer' : 'not-allowed' }}>
                                                         <EditIcon />
                                                     </button>
                                                     {user.id !== u.id && (

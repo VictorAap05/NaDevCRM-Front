@@ -47,6 +47,12 @@ const Audit = () => {
     // Depender de propiedades primitivas (id, rol)
     }, [navigate, user?.id, user?.rol]);
 
+    const obtenerEstiloAccion = (accion: string): { background: string; color: string } => {
+        if (accion === 'INSERT') return { background: 'rgba(0,200,81,0.2)', color: '#00c851' };
+        if (accion === 'UPDATE') return { background: 'rgba(51,181,229,0.2)', color: '#33b5e5' };
+        return { background: 'rgba(255,68,68,0.2)', color: '#ff4444' };
+    };
+
     const formatearFecha = (fechaIso: string) => {
         const fecha = new Date(fechaIso);
         return fecha.toLocaleString('es-EC', {
@@ -62,6 +68,12 @@ const Audit = () => {
 
     type JsonObject = Record<string, unknown>;
 
+    const formatearValor = (valor: unknown): string => {
+        if (valor === null || valor === undefined) return 'N/A';
+        if (typeof valor === 'object') return JSON.stringify(valor);
+        return String(valor);
+    };
+
     const obtenerDiferencias = (oldData: JsonObject | null, newData: JsonObject | null) => {
         if (!oldData && !newData) return <span>Sin datos</span>;
     
@@ -71,7 +83,7 @@ const Audit = () => {
                 <ul style={{ margin: 0, padding: 0, listStyleType: 'none' }}>
                     {Object.entries(newData).map(([key, val]) => (
                         <li key={key}>
-                            <strong>{key}:</strong> {String(val)}
+                            <strong>{key}:</strong> {formatearValor(val)}
                         </li>
                     ))}
                 </ul>
@@ -84,7 +96,7 @@ const Audit = () => {
                 <ul style={{ margin: 0, padding: 0, listStyleType: 'none', opacity: 0.7 }}>
                     {Object.entries(oldData).map(([key, val]) => (
                         <li key={key}>
-                            <strong>{key}:</strong> {String(val)}
+                            <strong>{key}:</strong> {formatearValor(val)}
                         </li>
                     ))}
                 </ul>
@@ -111,9 +123,9 @@ const Audit = () => {
                     <li key={diff.campo}>
                         <strong style={{ textTransform: 'capitalize' }}>{diff.campo}:</strong>{' '}
                         <span style={{ color: '#ff4444', textDecoration: 'line-through', marginRight: 6 }}>
-                            {String(diff.antes)}
+                            {formatearValor(diff.antes)}
                         </span>
-                        <span style={{ color: '#00c851' }}>➔ {String(diff.ahora)}</span>
+                        <span style={{ color: '#00c851' }}>➔ {formatearValor(diff.ahora)}</span>
                     </li>
                 ))}
             </ul>
@@ -182,8 +194,7 @@ const Audit = () => {
                                                     borderRadius: 20, 
                                                     fontSize: 12,
                                                     fontWeight: 'bold',
-                                                    background: log.action === 'INSERT' ? 'rgba(0,200,81,0.2)' : log.action === 'UPDATE' ? 'rgba(51,181,229,0.2)' : 'rgba(255,68,68,0.2)',
-                                                    color: log.action === 'INSERT' ? '#00c851' : log.action === 'UPDATE' ? '#33b5e5' : '#ff4444'
+                                                    ...obtenerEstiloAccion(log.action)
                                                 }}>
                                                     {log.action}
                                                 </span>
